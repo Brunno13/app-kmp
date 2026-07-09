@@ -6,7 +6,6 @@ plugins {
 }
 
 kotlin {
-    // ESTA É A CORREÇÃO MÁGICA: Configura o Java 11 pro Android sem quebrar o iOS
     jvmToolchain(17)
 
     listOf(
@@ -27,7 +26,6 @@ kotlin {
 
     sourceSets {
         androidMain.dependencies {
-            // Usando o atalho inteligente do plugin para o Preview no Android
             implementation(compose.preview)
 
             // Motores Android
@@ -36,7 +34,6 @@ kotlin {
         }
 
         commonMain.dependencies {
-            // Trocamos de "libs.compose..." para "compose..." (O atalho oficial da JetBrains)
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
@@ -44,9 +41,10 @@ kotlin {
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
 
-            // Jetpack ViewModel
+            // Jetpack ViewModel & Navigation
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
+            implementation(libs.jetbrains.navigation.compose)
 
             // Injeção de Dependência
             implementation(libs.koin.core)

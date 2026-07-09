@@ -1,5 +1,5 @@
 [versions]
-agp = "8.7.2" # Versão estável e amplamente suportada
+agp = "8.7.2"
 android-compileSdk = "35"
 android-minSdk = "24"
 android-targetSdk = "35"
@@ -17,8 +17,8 @@ ksp = "2.0.21-1.0.27"
 koin = "4.0.0"
 ktor = "3.0.0"
 ktorfit = "2.1.0"
+navigationCompose = "2.8.0-alpha08"
 
-# --- Persistência (Única lib que precisa ser Alpha no KMP) ---
 room = "2.7.0-alpha11"
 sqlite = "2.5.0-alpha11"
 
@@ -38,6 +38,9 @@ compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMul
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
 compose-uiTooling = { module = "org.jetbrains.compose.ui:ui-tooling", version.ref = "composeMultiplatform" }
 compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
+
+# --- Navegação Oficial ---
+jetbrains-navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 
 # --- KOIN (Injeção de Dependência) ---
 koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
