@@ -1,23 +1,35 @@
 package com.brunno.appkmp.di
 
+import androidx.room.RoomDatabase
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import com.brunno.appkmp.data.local.AppDatabase
+import com.brunno.appkmp.data.repository.AuthRepositoryImpl
+import com.brunno.appkmp.domain.repository.AuthRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import org.koin.core.context.startKoin
 import org.koin.dsl.KoinAppDeclaration
 import org.koin.dsl.module
 
-// Aqui declarar Repositórios, ViewModels e instâncias de Banco/Rede
 val appModule = module {
-    // Exemplo:
-    // single { MeuRepositorio() }
-    // factory { MeuViewModel(get()) }
+    single {
+        val builder = get<RoomDatabase.Builder<AppDatabase>>()
+        builder
+            .setDriver(BundledSQLiteDriver())
+            .setQueryCoroutineContext(Dispatchers.IO)
+            .build()
+    }
+
+    single { get<AppDatabase>().userDao() }
+
+    single<AuthRepository> { AuthRepositoryImpl(api = get(), dao = get()) }
 }
 
-// Função para inicializar o Koin (recebe parâmetros nativos quando chamado pelo Android)
 fun initKoin(appDeclaration: KoinAppDeclaration = {}) {
     startKoin {
         appDeclaration()
-        modules(appModule)
+        modules(platformModule, appModule, networkModule)
     }
 }
 
-// Função de atalho sem parâmetros (ideal para ser chamada pelo iOS)
 fun initKoin() = initKoin {}

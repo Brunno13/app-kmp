@@ -3,6 +3,13 @@ plugins {
     alias(libs.plugins.androidMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+
+    // Gerador de código (Necessário para o Room e Ktorfit)
+    alias(libs.plugins.ksp)
+
+    alias(libs.plugins.kotlinx.serialization)
+
+    alias(libs.plugins.ktorfit)
 }
 
 kotlin {
@@ -26,6 +33,7 @@ kotlin {
 
     sourceSets {
         androidMain.dependencies {
+            // Usando o atalho inteligente do plugin para o Preview no Android
             implementation(compose.preview)
 
             // Motores Android
@@ -34,6 +42,7 @@ kotlin {
         }
 
         commonMain.dependencies {
+            // UI (Compose)
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
@@ -59,9 +68,11 @@ kotlin {
             implementation("io.ktor:ktor-client-core:${libs.versions.ktor.get()}")
             implementation("io.ktor:ktor-client-content-negotiation:${libs.versions.ktor.get()}")
             implementation("io.ktor:ktor-serialization-kotlinx-json:${libs.versions.ktor.get()}")
+            implementation(libs.kotlinx.serialization.json)
         }
 
         iosMain.dependencies {
+            // Motores iOS
             implementation(libs.ktor.client.darwin)
         }
 
@@ -72,5 +83,16 @@ kotlin {
 }
 
 dependencies {
+    // Ferramentas de UI do Android
     androidRuntimeClasspath(libs.compose.uiTooling)
+
+    // Acionando os geradores de código do Room para cada plataforma (KSP)
+    add("kspAndroid", libs.room.compiler)
+    add("kspIosSimulatorArm64", libs.room.compiler)
+    add("kspIosArm64", libs.room.compiler)
+}
+
+// Força o Room a gerar código em Kotlin (Obrigatório para KMP)
+ksp {
+    arg("room.generateKotlin", "true")
 }
