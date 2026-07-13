@@ -17,13 +17,18 @@ class AuthRepositoryImpl(
         return dao.getAllUsers().map { users -> users.firstOrNull() }
     }
 
-    override suspend fun login(email: String, passwordHash: String): Result<Unit> {
+    override suspend fun login(email: String, password: String): Result<Unit> {
         return try {
-            val response = api.login(LoginRequest(email, passwordHash))
+            val response = api.login(LoginRequest(email, password))
+
+            if (response.user == null || response.token == null) {
+                val errorMessage = response.message ?: "E-mail ou senha incorretos."
+                return Result.failure(Exception(errorMessage))
+            }
 
             val user = UserEntity(
-                name = response.name,
-                email = email,
+                name = response.user.name,
+                email = response.user.email,
                 token = response.token
             )
 

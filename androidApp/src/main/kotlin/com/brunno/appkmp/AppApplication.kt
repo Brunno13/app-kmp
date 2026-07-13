@@ -9,7 +9,7 @@ class AppApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        initKoin {
+        initKoin (baseUrl = BuildConfig.BASE_URL) {
             androidLogger()
             androidContext(this@AppApplication)
         }

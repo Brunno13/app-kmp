@@ -33,7 +33,7 @@ kotlin {
 
     sourceSets {
         androidMain.dependencies {
-            // Usando o atalho inteligente do plugin para o Preview no Android
+            // Usado atalho do plugin para o Preview no Android
             implementation(compose.preview)
 
             // Motores Android
@@ -58,6 +58,8 @@ kotlin {
             // Injeção de Dependência
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
+            implementation(libs.koin.core.viewmodel)
+            implementation(libs.koin.compose.viewmodel)
 
             // Banco de Dados (Room KMP)
             implementation(libs.room.runtime)
@@ -83,16 +85,13 @@ kotlin {
 }
 
 dependencies {
-    // Ferramentas de UI do Android
     androidRuntimeClasspath(libs.compose.uiTooling)
 
-    // Acionando os geradores de código do Room para cada plataforma (KSP)
     add("kspAndroid", libs.room.compiler)
     add("kspIosSimulatorArm64", libs.room.compiler)
     add("kspIosArm64", libs.room.compiler)
 }
 
-// Força o Room a gerar código em Kotlin (Obrigatório para KMP)
 ksp {
     arg("room.generateKotlin", "true")
 }

@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.brunno.appkmp.presentation.screens.LoginScreen
 
 @Composable
 fun App() {
@@ -24,6 +25,7 @@ fun App() {
             startDestination = "home",
             modifier = Modifier.fillMaxSize().safeContentPadding()
         ) {
+            // Tela Inicial
             composable("home") {
                 Column(
                     modifier = Modifier.fillMaxSize(),
@@ -31,10 +33,21 @@ fun App() {
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text("Esta é a Tela Inicial")
-                    Button(onClick = { navController.navigate("details") }) {
-                        Text("Ir para Detalhes")
+
+                    Button(onClick = { navController.navigate("login") }) {
+                        Text("Ir para Login")
                     }
                 }
+            }
+
+            composable("login") {
+                LoginScreen(
+                    onLoginSuccess = {
+                        navController.navigate("home") {
+                            popUpTo("home") { inclusive = true }
+                        }
+                    }
+                )
             }
 
             composable("details") {

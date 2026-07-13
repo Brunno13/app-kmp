@@ -5,12 +5,23 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class LoginRequest(
     val email: String,
-    val passwordHash: String
+    val password: String,
+    val rememberMe: Boolean = true,
+    val callbackURL: String = "/"
 )
 
 @Serializable
 data class LoginResponse(
-    val token: String,
-    val userId: String,
-    val name: String
+    val token: String? = null,
+    val user: BetterAuthUser? = null,
+    val message: String? = null
+)
+
+@Serializable
+data class BetterAuthUser(
+    val id: String,
+    val name: String,
+    val email: String,
+    val image: String? = null,
+    val role: String? = null
 )

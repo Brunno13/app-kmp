@@ -7,7 +7,7 @@ import de.jensklingenberg.ktorfit.http.POST
 
 interface AuthApi {
 
-    @POST("sign-in")
+    @POST("api/auth/sign-in/email")
     suspend fun login(@Body request: LoginRequest): LoginResponse
 
 }
