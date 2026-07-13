@@ -25,16 +25,16 @@ A cross-platform mobile application (Android and iOS) built with **Kotlin Multip
 - [x] **Local Persistence:** Room Multiplatform database setup and entity schemas.
 - [x] **Network Layer:** Ktorfit configuration and API route mapping (`/sign-in`, etc).
 - [x] **Hybrid Repositories:** Priority logic implementation (fetch locally from Room or fetch from Ktorfit and save locally).
+- [x] **Flavors:** Environment variable configuration (Staging/Production) directly in Gradle Build Variants and Swift Macros.
+- [x] **Authentication UI:** Development of login screens and error mapping.
+- [x] **State Management:** ViewModel construction based on `StateFlow`.
+- [x] **Secure Storage:** Keychain (iOS) and EncryptedSharedPreferences (Android) configuration for authentication tokens.
 
 ### ⏳ Next Steps
-- [ ] **Secure Storage:** Keychain (iOS) and EncryptedSharedPreferences (Android) configuration for authentication tokens.
 - [ ] **Design System:** Creation of reusable visual components using Compose.
-- [ ] **State Management:** ViewModel construction based on `StateFlow`.
-- [ ] **Authentication UI:** Development of login screens and error mapping.
 - [ ] **Native Integration:** Biometrics implementation via `expect/actual` (Face ID / Touch ID).
 - [ ] **CI/CD Migration:** Adaptation of Woodpecker CI routines to run `./gradlew assemble` and `xcodebuild`.
 - [ ] **E2E Testing:** Creation of interactive test flows using Maestro scripts.
-- [ ] **Flavors:** Environment variable configuration (Staging/Production) directly in Gradle Build Variants.
 
 ---
 

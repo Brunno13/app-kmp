@@ -8,8 +8,11 @@ import org.koin.dsl.module
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSUserDomainMask
+import com.russhwolf.settings.ExperimentalSettingsImplementation
+import com.russhwolf.settings.KeychainSettings
+import com.russhwolf.settings.Settings
 
-@OptIn(ExperimentalForeignApi::class)
+@OptIn(ExperimentalForeignApi::class, ExperimentalSettingsImplementation::class)
 actual val platformModule = module {
     single<RoomDatabase.Builder<AppDatabase>> {
         val documentDirectory = NSFileManager.defaultManager.URLForDirectory(
@@ -24,5 +27,9 @@ actual val platformModule = module {
         Room.databaseBuilder<AppDatabase>(
             name = dbFilePath
         )
+    }
+
+    single<Settings> {
+        KeychainSettings(service = "AppKmpSecureVault")
     }
 }

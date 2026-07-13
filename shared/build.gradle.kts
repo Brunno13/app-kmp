@@ -39,6 +39,8 @@ kotlin {
             // Motores Android
             implementation(libs.koin.android)
             implementation(libs.ktor.client.okhttp)
+
+            implementation(libs.androidxSecurityCrypto)
         }
 
         commonMain.dependencies {
@@ -71,6 +73,8 @@ kotlin {
             implementation("io.ktor:ktor-client-content-negotiation:${libs.versions.ktor.get()}")
             implementation("io.ktor:ktor-serialization-kotlinx-json:${libs.versions.ktor.get()}")
             implementation(libs.kotlinx.serialization.json)
+
+            implementation(libs.multiplatformSettings)
         }
 
         iosMain.dependencies {

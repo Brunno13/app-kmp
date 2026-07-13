@@ -25,7 +25,7 @@ val appModule = module {
 
     single { get<AppDatabase>().userDao() }
 
-    single<AuthRepository> { AuthRepositoryImpl(api = get(), dao = get()) }
+    single<AuthRepository> { AuthRepositoryImpl(api = get(), dao = get(), settings = get()) }
 
     viewModelOf(::AuthViewModel)
 }
