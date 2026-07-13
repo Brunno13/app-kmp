@@ -131,4 +131,3 @@ To maintain clean, scalable, and loosely coupled code across platforms, we follo
 **3. Smart Hybrid Persistence (Single Source of Truth)**
 * **Cache and Offline Mode:** The UI strictly observes the local database (`Room Multiplatform` + `Bundled SQLite`). The network (`Ktorfit`) updates the database in the background, and the database reactively updates the UI via `StateFlow`.
 * **Security:** Session tokens and sensitive keys are never saved in plain text or standard DBs. They are stored using device-native encryption (`Keychain` on iOS, `EncryptedSharedPreferences` on Android) abstracted via `expect/actual` or Multiplatform Settings.
-
