@@ -11,6 +11,7 @@ A cross-platform mobile application (Android and iOS) built with **Kotlin Multip
 * **Robust Error Handling:** Strongly typed, domain-driven error management (`AppResult`/`AppError`) mapping network and authentication failures directly to localized UI states.
 * **Automated Testing:** Unit tests for native business rules and E2E visual flow automation with `Maestro`.
 * **Infrastructure & CI/CD:** Isolated environments (Staging and Production) with automated cross-builds via Woodpecker CI.
+
 ---
 
 ## 🗺️ Project Roadmap
@@ -31,9 +32,9 @@ A cross-platform mobile application (Android and iOS) built with **Kotlin Multip
 - [x] **State Management:** ViewModel construction based on `StateFlow`.
 - [x] **Secure Storage:** Keychain (iOS) and EncryptedSharedPreferences (Android) configuration for authentication tokens.
 - [x] **Global Localization & Error Handling:** Implementation of Compose Resources for i18n (En/Pt), centralized navigation constants (`Routes`), and strongly typed error mapping (`AppError`) from Domain to UI.
+- [x] **Design System:** Creation of reusable visual components using Compose, including global theming (Colors, Shapes, Dimens) and shared widgets (`AppButton`, `AppTextField`, `MenuCard`).
 
 ### ⏳ Next Steps
-- [ ] **Design System:** Creation of reusable visual components using Compose.
 - [ ] **Native Integration:** Biometrics implementation via `expect/actual` (Face ID / Touch ID).
 - [ ] **CI/CD Migration:** Adaptation of Woodpecker CI routines to run `./gradlew assemble` and `xcodebuild`.
 - [ ] **E2E Testing:** Creation of interactive test flows using Maestro scripts.
@@ -98,8 +99,10 @@ The main folder structure is as follows:
                 │   └── PlatformModule.kt  # Expect/Actual definitions for native dependencies
                 │
                 ├── presentation/      # UI Layer & Presentation Logic
+                │   ├── theme/         # Design System (Theme.kt, Color.kt, Shape.kt, Dimens.kt)
+                │   ├── components/    # Reusable UI Widgets (AppButton, AppTextField, MenuCard, etc)
                 │   ├── navigation/    # Centralized routing constants (Routes.kt)
-                │   ├── screens/       # Compose Multiplatform Screens (Home, Login, etc)
+                │   ├── screens/       # Compose Multiplatform Screens (Home, Login, Profile, etc)
                 │   ├── viewmodels/    # Jetpack ViewModels managing UI State (StateFlow)
                 │   └── utils/         # UI Helpers (e.g., ErrorMapper.kt for string mapping)
                 │
