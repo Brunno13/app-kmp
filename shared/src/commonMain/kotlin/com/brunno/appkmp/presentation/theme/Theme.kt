@@ -11,8 +11,11 @@ private val LightColors = lightColorScheme(
     onPrimary = OnPrimaryLight,
     background = BackgroundLight,
     surface = SurfaceLight,
+    surfaceVariant = SurfaceVariantLight,
     onBackground = OnBackgroundLight,
-    onSurface = OnBackgroundLight
+    onSurface = OnBackgroundLight,
+    tertiary = SuccessGreenLight,
+    error = ErrorRedLight
 )
 
 private val DarkColors = darkColorScheme(
@@ -20,8 +23,11 @@ private val DarkColors = darkColorScheme(
     onPrimary = OnPrimaryDark,
     background = BackgroundDark,
     surface = SurfaceDark,
+    surfaceVariant = SurfaceVariantDark,
     onBackground = OnBackgroundDark,
-    onSurface = OnBackgroundDark
+    onSurface = OnBackgroundDark,
+    tertiary = SuccessGreenDark,
+    error = ErrorRedDark
 )
 
 @Composable
@@ -37,6 +43,7 @@ fun AppTheme(
 
     MaterialTheme(
         colorScheme = colors,
+        shapes = AppShapes,
         // Adicionar tipografia personalizada no futuro:
         // typography = AppTypography,
         content = content

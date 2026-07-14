@@ -75,6 +75,8 @@ kotlin {
             implementation(libs.kotlinx.serialization.json)
 
             implementation(libs.multiplatformSettings)
+
+            implementation(compose.materialIconsExtended)
         }
 
         iosMain.dependencies {

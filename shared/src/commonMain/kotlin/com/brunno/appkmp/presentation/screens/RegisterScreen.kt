@@ -10,28 +10,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.brunno.appkmp.presentation.utils.asString
-import com.brunno.appkmp.presentation.viewmodels.AuthViewModel
-import com.brunno.appkmp.presentation.viewmodels.LoginUiState
 import kmpprojectbrunno.shared.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
-import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun LoginScreen(
-    onLoginSuccess: () -> Unit,
-    onNavigateToRegister: () -> Unit,
-    onNavigateToForgotPassword: () -> Unit,
-    viewModel: AuthViewModel = koinViewModel()
+fun RegisterScreen(
+    onNavigateToLogin: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val currentUser by viewModel.currentUser.collectAsState()
+    var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-
-    LaunchedEffect(currentUser) {
-        if (currentUser != null) onLoginSuccess()
-    }
+    var confirmPassword by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
@@ -39,10 +28,20 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = stringResource(Res.string.welcome_back),
+            text = stringResource(Res.string.create_account),
             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold)
         )
         Spacer(modifier = Modifier.height(48.dp))
+
+        OutlinedTextField(
+            value = fullName,
+            onValueChange = { fullName = it },
+            placeholder = { Text(stringResource(Res.string.placeholder_full_name)) },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true
+        )
+        Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
             value = email,
@@ -63,50 +62,37 @@ fun LoginScreen(
             shape = RoundedCornerShape(12.dp),
             singleLine = true
         )
-
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-            TextButton(onClick = onNavigateToForgotPassword) {
-                Text(
-                    text = stringResource(Res.string.action_forgot_password),
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-        }
         Spacer(modifier = Modifier.height(16.dp))
 
+        OutlinedTextField(
+            value = confirmPassword,
+            onValueChange = { confirmPassword = it },
+            placeholder = { Text(stringResource(Res.string.placeholder_confirm_password)) },
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true
+        )
+        Spacer(modifier = Modifier.height(32.dp))
+
         Button(
-            onClick = { viewModel.login(email, password) },
-            enabled = uiState !is LoginUiState.Loading && email.isNotBlank() && password.isNotBlank(),
+            onClick = { /* TODO: Chamar o ViewModel de Cadastro */ },
             modifier = Modifier.fillMaxWidth().height(56.dp),
             shape = RoundedCornerShape(12.dp)
         ) {
-            if (uiState is LoginUiState.Loading) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
-            } else {
-                Text(stringResource(Res.string.action_sign_in), fontWeight = FontWeight.Bold)
-            }
-        }
-
-        if (uiState is LoginUiState.Error) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = (uiState as LoginUiState.Error).error.asString(),
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium
-            )
+            Text(stringResource(Res.string.action_sign_up), fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(Res.string.msg_dont_have_account), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(Res.string.msg_already_have_account), color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.width(4.dp))
             Text(
-                text = stringResource(Res.string.action_sign_up),
+                text = stringResource(Res.string.action_sign_in),
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.clickable { onNavigateToRegister() }.padding(4.dp)
+                modifier = Modifier.clickable { onNavigateToLogin() }.padding(4.dp)
             )
         }
     }

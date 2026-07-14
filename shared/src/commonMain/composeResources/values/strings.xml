@@ -20,4 +20,70 @@
     <string name="welcome_title">Welcome</string>
     <string name="label_email">Email</string>
     <string name="label_password">Password</string>
+
+    <!-- Auth Layouts -->
+    <string name="welcome_back">Welcome back</string>
+    <string name="create_account">Create Account</string>
+    <string name="reset_password_title">Reset Password</string>
+
+    <string name="placeholder_full_name">Full name</string>
+    <string name="placeholder_email">Your email</string>
+    <string name="placeholder_password">Your password</string>
+    <string name="placeholder_confirm_password">Confirm password</string>
+
+    <string name="action_forgot_password">Forgot password?</string>
+    <string name="action_sign_in">Sign In</string>
+    <string name="action_sign_up">Sign Up</string>
+    <string name="action_send_link">Send Link</string>
+    <string name="action_back_to_login">Back to Login</string>
+
+    <string name="msg_dont_have_account">Don\'t have an account?</string>
+    <string name="msg_already_have_account">Already have an account?</string>
+
+    <!-- Home & Profile -->
+    <string name="welcome_user">Welcome, Brunno Santos da Silva!</string>
+    <string name="btn_test_toast">Test Success Toast</string>
+    <string name="btn_test_modal">Test Alert Modal</string>
+    <string name="btn_simulate_crash">Simulate App Crash</string>
+    <string name="user_email_placeholder">java.brunno@gmail.com</string>
+    <string name="menu_edit_profile">Edit Profile Data</string>
+    <string name="menu_security">Security &amp; Sessions</string>
+    <string name="title_app_theme">App Theme</string>
+    <string name="theme_light">LIGHT</string>
+    <string name="theme_dark">DARK</string>
+    <string name="theme_auto">AUTO</string>
+    <string name="title_offline_mode">Offline Mode</string>
+    <string name="desc_offline_mode">Save data on device</string>
+    <string name="action_sign_out">Sign Out</string>
+
+    <!-- Edit Profile -->
+    <string name="title_edit_profile">Edit Profile</string>
+    <string name="action_change_photo">Change Photo</string>
+    <string name="title_update_profile">Update Profile</string>
+    <string name="action_save_changes">Save Changes</string>
+
+    <!-- Security -->
+    <string name="title_security">Security</string>
+    <string name="title_change_password">Change Password</string>
+    <string name="placeholder_current_password">Current Password</string>
+    <string name="placeholder_new_password">New Password</string>
+    <string name="action_update_password">Update Password</string>
+    <string name="title_biometric">Biometric Authentication</string>
+    <string name="title_biometric_unlock">Biometric Unlock</string>
+    <string name="desc_biometric_unlock">Require Face ID or Touch ID when opening the app</string>
+    <string name="warning_biometric"> * Your device does not have biometric hardware or it is not configured.</string>
+    <string name="title_active_sessions">Active Sessions</string>
+    <string name="desc_active_sessions">Manage devices connected to your account.</string>
+
+    <!-- Mocks & Accessibility -->
+    <string name="mock_user_name">Brunno Santos da Silva</string>
+    <string name="mock_device_name">okhttp/4.12.0</string>
+    <string name="mock_device_date">7/14/2026</string>
+    <string name="desc_settings">Settings Icon</string>
+    <string name="desc_avatar">User Avatar</string>
+    <string name="desc_go_back">Go Back</string>
+    <string name="desc_delete">Delete</string>
+
+    <string name="tab_home">Home</string>
+    <string name="tab_profile">Profile</string>
 </resources>
