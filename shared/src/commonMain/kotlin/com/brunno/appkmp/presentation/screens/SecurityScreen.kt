@@ -27,12 +27,7 @@ fun SecurityScreen(onBack: () -> Unit) {
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            AppTopBar(
-                title = stringResource(Res.string.title_security),
-                onBackClick = onBack
-            )
-        }
+        topBar = { AppTopBar(title = stringResource(Res.string.title_security), onBackClick = onBack) }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -48,31 +43,13 @@ fun SecurityScreen(onBack: () -> Unit) {
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onBackground
             )
-
             Spacer(modifier = Modifier.height(16.dp))
 
-            AppTextField(
-                value = currentPassword,
-                onValueChange = { currentPassword = it },
-                placeholder = stringResource(Res.string.placeholder_current_password),
-                isPassword = true
-            )
-
+            AppTextField(value = currentPassword, onValueChange = { currentPassword = it }, placeholder = stringResource(Res.string.placeholder_current_password), isPassword = true)
             Spacer(modifier = Modifier.height(16.dp))
-
-            AppTextField(
-                value = newPassword,
-                onValueChange = { newPassword = it },
-                placeholder = stringResource(Res.string.placeholder_new_password),
-                isPassword = true
-            )
-
+            AppTextField(value = newPassword, onValueChange = { newPassword = it }, placeholder = stringResource(Res.string.placeholder_new_password), isPassword = true)
             Spacer(modifier = Modifier.height(16.dp))
-
-            AppButton(
-                text = stringResource(Res.string.action_update_password),
-                onClick = { /* TODO */ }
-            )
+            AppButton(text = stringResource(Res.string.action_update_password), onClick = { /* TODO */ })
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -81,19 +58,13 @@ fun SecurityScreen(onBack: () -> Unit) {
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onBackground
             )
-
             Spacer(modifier = Modifier.height(16.dp))
 
             MenuCard(
                 title = stringResource(Res.string.title_biometric_unlock),
                 subtitle = stringResource(Res.string.desc_biometric_unlock),
                 icon = Icons.Default.Lock,
-                trailingContent = {
-                    Switch(
-                        checked = biometricEnabled,
-                        onCheckedChange = { biometricEnabled = it }
-                    )
-                }
+                trailingContent = { Switch(checked = biometricEnabled, onCheckedChange = { biometricEnabled = it }) }
             )
 
             Text(
@@ -110,7 +81,6 @@ fun SecurityScreen(onBack: () -> Unit) {
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onBackground
             )
-
             Spacer(modifier = Modifier.height(16.dp))
 
             MenuCard(
@@ -119,11 +89,7 @@ fun SecurityScreen(onBack: () -> Unit) {
                 icon = Icons.Default.Computer,
                 trailingContent = {
                     IconButton(onClick = { /* TODO */ }) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = stringResource(Res.string.desc_delete),
-                            tint = MaterialTheme.colorScheme.error
-                        )
+                        Icon(imageVector = Icons.Default.Delete, contentDescription = stringResource(Res.string.desc_delete), tint = MaterialTheme.colorScheme.error)
                     }
                 }
             )

@@ -1,16 +1,16 @@
 package com.brunno.appkmp.presentation.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import com.brunno.appkmp.presentation.components.AppBottomBar
+import com.brunno.appkmp.presentation.components.AppButton
 import com.brunno.appkmp.presentation.navigation.Routes
+import com.brunno.appkmp.presentation.theme.dimens
 import com.brunno.appkmp.presentation.viewmodels.AuthViewModel
 import kmpprojectbrunno.shared.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -26,6 +26,7 @@ fun HomeScreen(
     val userName = currentUser?.name ?: ""
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             AppBottomBar(
                 currentRoute = Routes.HOME,
@@ -38,7 +39,7 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = MaterialTheme.dimens.screenPadding),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -47,43 +48,35 @@ fun HomeScreen(
                 style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.dimens.spaceMedium)
             )
 
-            Spacer(modifier = Modifier.height(56.dp))
+            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceHuge))
 
-            Button(
+            AppButton(
+                text = stringResource(Res.string.btn_test_toast),
                 onClick = { /* TODO */ },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary),
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(stringResource(Res.string.btn_test_toast), fontWeight = FontWeight.Bold)
-            }
+                containerColor = MaterialTheme.colorScheme.tertiary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
 
-            Button(
-                onClick = { /* TODO */ },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(stringResource(Res.string.btn_test_modal), fontWeight = FontWeight.Bold)
-            }
+            AppButton(
+                text = stringResource(Res.string.btn_test_modal),
+                onClick = { /* TODO */ }
+            )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceExtraLarge))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceExtraLarge))
 
-            Button(
+            AppButton(
+                text = stringResource(Res.string.btn_simulate_crash),
                 onClick = { /* TODO */ },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(stringResource(Res.string.btn_simulate_crash), fontWeight = FontWeight.Bold)
-            }
+                containerColor = MaterialTheme.colorScheme.error,
+                contentColor = MaterialTheme.colorScheme.onError
+            )
         }
     }
 }

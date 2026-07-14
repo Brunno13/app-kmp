@@ -5,6 +5,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ReadOnlyComposable
 
 private val LightColors = lightColorScheme(
     primary = PrimaryLight,
@@ -30,6 +32,11 @@ private val DarkColors = darkColorScheme(
     error = ErrorRedDark
 )
 
+val MaterialTheme.dimens: AppDimens
+    @Composable
+    @ReadOnlyComposable
+    get() = LocalAppDimens.current
+
 @Composable
 fun AppTheme(
     useDarkTheme: Boolean = isSystemInDarkTheme(),
@@ -41,11 +48,13 @@ fun AppTheme(
         LightColors
     }
 
-    MaterialTheme(
-        colorScheme = colors,
-        shapes = AppShapes,
-        // Adicionar tipografia personalizada no futuro:
-        // typography = AppTypography,
-        content = content
-    )
+    CompositionLocalProvider(LocalAppDimens provides AppDimens()) {
+        MaterialTheme(
+            colorScheme = colors,
+            shapes = AppShapes,
+            // Adicionar tipografia personalizada no futuro:
+            // typography = AppTypography,
+            content = content
+        )
+    }
 }
