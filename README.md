@@ -6,10 +6,11 @@ A cross-platform mobile application (Android and iOS) built with **Kotlin Multip
 * **Authentication & Network:** Consumption of the `better-auth` API using **Ktorfit** (Retrofit-like syntax) for typed HTTP calls.
 * **Architecture (MVVM):** Clear separation of concerns using the official Jetpack ViewModel pattern for KMP and `StateFlow` for reactivity.
 * **Offline Persistence:** Reactive local database using **Room Multiplatform** as the Single Source of Truth.
-* **Security:** Encrypted native storage for session tokens using `Multiplatform Settings`.
+* **Security:** Encrypted native storage for session tokens (`EncryptedSharedPreferences` / `Keychain`) using **Multiplatform Settings**.
+* **Global Localization & UI:** Native i18n support (English/Portuguese) using **Compose Resources**, zero "magic strings", and centralized navigation constants.
+* **Robust Error Handling:** Strongly typed, domain-driven error management (`AppResult`/`AppError`) mapping network and authentication failures directly to localized UI states.
 * **Automated Testing:** Unit tests for native business rules and E2E visual flow automation with `Maestro`.
 * **Infrastructure & CI/CD:** Isolated environments (Staging and Production) with automated cross-builds via Woodpecker CI.
-
 ---
 
 ## 🗺️ Project Roadmap
@@ -29,6 +30,7 @@ A cross-platform mobile application (Android and iOS) built with **Kotlin Multip
 - [x] **Authentication UI:** Development of login screens and error mapping.
 - [x] **State Management:** ViewModel construction based on `StateFlow`.
 - [x] **Secure Storage:** Keychain (iOS) and EncryptedSharedPreferences (Android) configuration for authentication tokens.
+- [x] **Global Localization & Error Handling:** Implementation of Compose Resources for i18n (En/Pt), centralized navigation constants (`Routes`), and strongly typed error mapping (`AppError`) from Domain to UI.
 
 ### ⏳ Next Steps
 - [ ] **Design System:** Creation of reusable visual components using Compose.
@@ -43,17 +45,17 @@ A cross-platform mobile application (Android and iOS) built with **Kotlin Multip
 * **Language:** Kotlin
 * **Dependency & Build Management:** Gradle (Version Catalogs `.toml` + KSP)
 * **Navigation:** Jetpack Navigation Compose Multiplatform
-* **Network & API:** Ktorfit + Ktor Client (com Kotlinx Serialization)
+* **Network & API:** Ktorfit + Ktor Client (with Kotlinx Serialization)
 * **Database & Offline-First:** Room Multiplatform + Bundled SQLite
 * **Global State & Lifecycle:** Jetpack ViewModel + StateFlow (Kotlin Coroutines)
 * **Dependency Injection:** Koin
 * **Security & Biometrics:** Multiplatform Settings (EncryptedSharedPreferences/Keychain) + Native APIs via `expect/actual`
-* **Forms & Validation:** StateFlow + Konform (Validação nativa)
+* **Forms & Validation:** StateFlow + Konform (Native validation)
 * **Resilience & Internationalization:** Compose Multiplatform Resources
 * **Automated Testing:** Kotest (Unit/Integration) + Maestro (Multiplatform E2E)
-* **UI Documentation:** Compose `@Preview` (Isolado no Android) / Showkase
+* **UI Documentation:** Compose `@Preview` (Isolated on Android) / Showkase
 * **Architecture & Quality:** MVVM (Model-View-ViewModel) + Single Source of Truth
-* **CI/CD:** Woodpecker CI (Builds cruzados via `./gradlew` e `xcodebuild`)
+* **CI/CD:** Woodpecker CI (Cross-builds via `./gradlew` and `xcodebuild`)
 
 ---
 
@@ -79,14 +81,16 @@ The main folder structure is as follows:
 └── shared/               # Core KMP module (100% shared business logic and UI)
     └── src/
         ├── androidMain/  # Android-specific expected implementations (expect/actual)
-        │   └── kotlin/.../di/PlatformModule.android.kt # Android Room Database Builder
+        │   └── kotlin/.../di/PlatformModule.kt # Android Room Builder & EncryptedSharedPreferences
         │
         ├── iosMain/      # iOS-specific expected implementations (expect/actual)
-        │   └── kotlin/.../di/PlatformModule.ios.kt     # iOS Room Database Builder (NSDocumentDirectory)
+        │   └── kotlin/.../di/PlatformModule.kt # iOS Room Builder & Keychain Settings
         │
-        └── commonMain/   # Shared Kotlin codebase (UI, ViewModels, Repositories, Database)
+        └── commonMain/   # Shared Kotlin codebase
+            ├── composeResources/ # Global Localization (i18n XMLs) & Shared Assets
+            │
             └── kotlin/com/brunno/appkmp/
-                ├── App.kt             # Compose Multiplatform Entry Point & Jetpack Navigation (NavHost)
+                ├── App.kt             # Compose Multiplatform Entry Point (NavHost)
                 │
                 ├── di/                # Dependency Injection Setup (Koin)
                 │   ├── KoinModule.kt      # Core module injection (ViewModels, Repositories, DB)
@@ -94,10 +98,13 @@ The main folder structure is as follows:
                 │   └── PlatformModule.kt  # Expect/Actual definitions for native dependencies
                 │
                 ├── presentation/      # UI Layer & Presentation Logic
+                │   ├── navigation/    # Centralized routing constants (Routes.kt)
+                │   ├── screens/       # Compose Multiplatform Screens (Home, Login, etc)
                 │   ├── viewmodels/    # Jetpack ViewModels managing UI State (StateFlow)
-                │   └── screens/       # Compose Multiplatform Screens (Home, Login, Profile)
+                │   └── utils/         # UI Helpers (e.g., ErrorMapper.kt for string mapping)
                 │
                 ├── domain/            # Core Business Rules (Independent of Frameworks)
+                │   ├── error/         # Strongly typed error handling (AppError, AppResult)
                 │   ├── models/        # Pure Kotlin Data Classes (Domain representations)
                 │   └── repository/    # Repository Interfaces (AuthRepository.kt)
                 │
@@ -109,10 +116,10 @@ The main folder structure is as follows:
                     │
                     ├── remote/        # Network Engine (Ktorfit)
                     │   ├── AuthApi.kt     # API Interfaces (@POST, @GET)
-                    │   └── models/        # Data Transfer Objects (DTOs) for JSON Serialization
+                    │   └── models/        # DTOs for JSON Serialization
                     │
-                    └── repository/    # Hybrid Data Orchestration (Single Source of Truth)
-                        └── AuthRepositoryImpl.kt # Fetches from Ktorfit, saves to Room, serves to Domain
+                    └── repository/    # Hybrid Data Orchestration
+                        └── AuthRepositoryImpl.kt # Ktorfit + Room + Secure Storage integration
 ```
 ### 📏 Architecture Guidelines
 

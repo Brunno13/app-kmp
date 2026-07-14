@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- General -->
+    <string name="app_name">My App</string>
+    <string name="btn_login">Sign In</string>
+    <string name="btn_ok">OK</string>
+
+    <!-- Errors -->
+    <string name="error_invalid_credentials">Invalid email or password.</string>
+    <string name="error_no_internet">No internet connection. Please check your network.</string>
+    <string name="error_server">We are experiencing instability. Try again later.</string>
+    <string name="error_unknown">An unexpected error occurred.</string>
+
+    <!-- Screens -->
+    <string name="home_title">This is the Home Screen</string>
+    <string name="btn_go_to_login">Go to Login</string>
+    <string name="details_title">This is the Details Screen</string>
+    <string name="btn_back">Back</string>
+    <!-- Login Screen -->
+    <string name="welcome_title">Welcome</string>
+    <string name="label_email">Email</string>
+    <string name="label_password">Password</string>
+</resources>

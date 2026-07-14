@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- General -->
+    <string name="app_name">Meu App</string>
+    <string name="btn_login">Entrar</string>
+    <string name="btn_ok">OK</string>
+
+    <!-- Errors -->
+    <string name="error_invalid_credentials">E-mail ou senha incorretos.</string>
+    <string name="error_no_internet">Sem conexão com a internet. Verifique sua rede.</string>
+    <string name="error_server">Estamos enfrentando instabilidades. Tente novamente.</string>
+    <string name="error_unknown">Ocorreu um erro inesperado.</string>
+
+    <!-- Screens -->
+    <string name="home_title">Esta é a Tela Inicial</string>
+    <string name="btn_go_to_login">Ir para Login</string>
+    <string name="details_title">Esta é a Tela de Detalhes</string>
+    <string name="btn_back">Voltar</string>
+    <!-- Login Screen -->
+    <string name="welcome_title">Bem-vindo</string>
+    <string name="label_email">E-mail</string>
+    <string name="label_password">Senha</string>
+    <!-- O btn_login já deve estar lá como "Entrar" -->
+</resources>

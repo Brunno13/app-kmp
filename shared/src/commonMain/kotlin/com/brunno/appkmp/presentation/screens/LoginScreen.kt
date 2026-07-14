@@ -7,8 +7,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.brunno.appkmp.presentation.utils.asString
 import com.brunno.appkmp.presentation.viewmodels.AuthViewModel
 import com.brunno.appkmp.presentation.viewmodels.LoginUiState
+import kmpprojectbrunno.shared.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -34,22 +37,27 @@ fun LoginScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Bem-vindo", style = MaterialTheme.typography.headlineMedium)
+        Text(
+            text = stringResource(Res.string.welcome_title),
+            style = MaterialTheme.typography.headlineMedium
+        )
+
         Spacer(modifier = Modifier.height(32.dp))
 
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("E-mail") },
+            label = { Text(stringResource(Res.string.label_email)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
 
         Spacer(modifier = Modifier.height(16.dp))
+
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("Senha") },
+            label = { Text(stringResource(Res.string.label_password)) },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
@@ -68,14 +76,14 @@ fun LoginScreen(
                     color = MaterialTheme.colorScheme.onPrimary
                 )
             } else {
-                Text("Entrar")
+                Text(stringResource(Res.string.btn_login))
             }
         }
 
         if (uiState is LoginUiState.Error) {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = (uiState as LoginUiState.Error).message,
+                text = (uiState as LoginUiState.Error).error.asString(),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium
             )

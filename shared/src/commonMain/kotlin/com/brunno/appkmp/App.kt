@@ -13,7 +13,10 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.brunno.appkmp.presentation.navigation.Routes
 import com.brunno.appkmp.presentation.screens.LoginScreen
+import kmpprojectbrunno.shared.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun App() {
@@ -22,43 +25,43 @@ fun App() {
 
         NavHost(
             navController = navController,
-            startDestination = "home",
+            startDestination = Routes.HOME,
             modifier = Modifier.fillMaxSize().safeContentPadding()
         ) {
-            // Tela Inicial
-            composable("home") {
+            composable(Routes.HOME) {
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Text("Esta é a Tela Inicial")
+                    Text(stringResource(Res.string.home_title))
 
-                    Button(onClick = { navController.navigate("login") }) {
-                        Text("Ir para Login")
+                    Button(onClick = { navController.navigate(Routes.LOGIN) }) {
+                        Text(stringResource(Res.string.btn_go_to_login))
                     }
                 }
             }
 
-            composable("login") {
+            composable(Routes.LOGIN) {
                 LoginScreen(
                     onLoginSuccess = {
-                        navController.navigate("home") {
-                            popUpTo("home") { inclusive = true }
+                        navController.navigate(Routes.HOME) {
+                            popUpTo(Routes.HOME) { inclusive = true }
                         }
                     }
                 )
             }
 
-            composable("details") {
+            composable(Routes.DETAILS) {
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Text("Esta é a Tela de Detalhes")
+                    Text(stringResource(Res.string.details_title))
+
                     Button(onClick = { navController.popBackStack() }) {
-                        Text("Voltar")
+                        Text(stringResource(Res.string.btn_back))
                     }
                 }
             }

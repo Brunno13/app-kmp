@@ -2,6 +2,8 @@ package com.brunno.appkmp.presentation.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.brunno.appkmp.domain.error.AppError
+import com.brunno.appkmp.domain.error.AppResult
 import com.brunno.appkmp.domain.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -13,7 +15,7 @@ sealed interface LoginUiState {
     data object Idle : LoginUiState
     data object Loading : LoginUiState
     data object Success : LoginUiState
-    data class Error(val message: String) : LoginUiState
+    data class Error(val error: AppError) : LoginUiState
 }
 
 class AuthViewModel(
@@ -22,6 +24,7 @@ class AuthViewModel(
 
     private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
     val uiState = _uiState.asStateFlow()
+
     val currentUser = authRepository.observeCurrentUser()
         .stateIn(
             scope = viewModelScope,
@@ -35,14 +38,14 @@ class AuthViewModel(
 
             val result = authRepository.login(email, password)
 
-            result.fold(
-                onSuccess = {
+            when (result) {
+                is AppResult.Success -> {
                     _uiState.value = LoginUiState.Success
-                },
-                onFailure = { exception ->
-                    _uiState.value = LoginUiState.Error(exception.message ?: "Erro ao fazer login")
                 }
-            )
+                is AppResult.Error -> {
+                    _uiState.value = LoginUiState.Error(result.error)
+                }
+            }
         }
     }
 
