@@ -2,7 +2,6 @@ package com.brunno.appkmp.presentation.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.brunno.appkmp.data.remote.models.ActiveSession
 import com.brunno.appkmp.domain.error.AppError
 import com.brunno.appkmp.domain.error.AppResult
 import com.brunno.appkmp.domain.repository.AuthRepository
@@ -24,8 +23,6 @@ class AuthViewModel(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
     val uiState = _uiState.asStateFlow()
-    private val _activeSessions = MutableStateFlow<List<ActiveSession>>(emptyList())
-    val activeSessions = _activeSessions.asStateFlow()
 
     val currentUser = authRepository.observeCurrentUser()
         .stateIn(
@@ -34,24 +31,22 @@ class AuthViewModel(
             initialValue = null
         )
 
+    val activeSessions = authRepository.observeActiveSessions()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
     fun loadSessions() {
         viewModelScope.launch {
-            when (val result = authRepository.getActiveSessions()) {
-                is AppResult.Success -> {
-                    _activeSessions.value = result.data
-                }
-                is AppResult.Error -> {
-                    println("Falha silenciosa ao listar sessões: ${result.error}")
-                }
-            }
+            authRepository.syncActiveSessions()
         }
     }
 
     fun revokeSession(token: String, onCurrentSessionRevoked: () -> Unit) {
         viewModelScope.launch {
             val isCurrentSession = token == authRepository.getCurrentToken()
-            val currentList = _activeSessions.value
-            _activeSessions.value = currentList.filter { it.token != token }
 
             when (authRepository.revokeSession(token)) {
                 is AppResult.Success -> {
@@ -62,7 +57,7 @@ class AuthViewModel(
                     }
                 }
                 is AppResult.Error -> {
-                    _activeSessions.value = currentList
+                    // O erro pode ser tratado visualmente através de um Side Effect ou Snackbar
                 }
             }
         }

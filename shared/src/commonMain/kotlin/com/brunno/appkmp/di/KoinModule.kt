@@ -25,11 +25,18 @@ val appModule = module {
     }
 
     single { get<AppDatabase>().userDao() }
+    single { get<AppDatabase>().sessionDao() }
 
-    single<AuthRepository> { AuthRepositoryImpl(api = get(), dao = get(), settings = get()) }
+    single<AuthRepository> {
+        AuthRepositoryImpl(
+            api = get(),
+            dao = get(),
+            sessionDao = get(),
+            settings = get()
+        )
+    }
 
     viewModelOf(::AuthViewModel)
-
     viewModelOf(::ThemeViewModel)
 }
 

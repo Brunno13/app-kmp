@@ -1,5 +1,7 @@
 package com.brunno.appkmp.di
 
+import com.brunno.appkmp.data.local.SessionDao
+import com.brunno.appkmp.data.local.UserDao
 import com.brunno.appkmp.data.remote.AuthApi
 import com.brunno.appkmp.data.remote.createAuthApi
 import com.russhwolf.settings.Settings
@@ -22,6 +24,8 @@ val networkModule = module {
     single {
         val settings = get<Settings>()
         val baseUrl = get<String>(named("baseUrl"))
+        val userDao = get<UserDao>()
+        val sessionDao = get<SessionDao>()
         val originUrl = if (baseUrl.endsWith("/")) baseUrl.dropLast(1) else baseUrl
 
         val client = HttpClient {
@@ -45,7 +49,6 @@ val networkModule = module {
                     val setCookies = response.headers.getAll("Set-Cookie")
                     if (!setCookies.isNullOrEmpty()) {
                         val parsedCookies = setCookies.joinToString("; ") { it.substringBefore(";") }
-
                         settings.putString("api_cookies", parsedCookies)
                         println("🍪 COOKIES CAPTURADOS DO SERVIDOR: $parsedCookies")
                     }
@@ -53,8 +56,15 @@ val networkModule = module {
 
                 handleResponseExceptionWithRequest { exception, request ->
                     if (exception is ClientRequestException) {
+                        val status = exception.response.status.value
                         println("❌ KTOR ERRO: ${request.url}")
-                        println("❌ STATUS: ${exception.response.status}")
+                        println("❌ STATUS: $status")
+                        if (status == 401 || status == 403) {
+                            println("🔒 Sessão expirada/inválida detetada no Ktor. Forçando logout local...")
+                            settings.remove("auth_token")
+                            userDao.clearSession()
+                            sessionDao.clearAll()
+                        }
                     }
                 }
             }

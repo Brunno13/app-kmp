@@ -9,12 +9,13 @@ import kotlinx.coroutines.flow.Flow
 interface AuthRepository {
     fun observeCurrentUser(): Flow<UserEntity?>
     fun getCurrentToken(): String?
+    fun observeActiveSessions(): Flow<List<ActiveSession>>
+    suspend fun syncActiveSessions(): AppResult<Unit, AppError>
     suspend fun login(email: String, password: String): AppResult<Unit, AppError>
     suspend fun register(name: String, email: String, password: String): AppResult<Unit, AppError>
     suspend fun forgotPassword(email: String): AppResult<Unit, AppError>
     suspend fun changePassword(currentPassword: String, newPassword: String): AppResult<Unit, AppError>
     suspend fun updateUser(name: String): AppResult<Unit, AppError>
-    suspend fun getActiveSessions(): AppResult<List<ActiveSession>, AppError>
     suspend fun revokeSession(token: String): AppResult<Unit, AppError>
     suspend fun logout()
 }

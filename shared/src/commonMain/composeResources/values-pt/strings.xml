@@ -10,6 +10,7 @@
     <string name="error_no_internet">Sem conexão com a internet. Verifique sua rede.</string>
     <string name="error_server">Estamos enfrentando instabilidades. Tente novamente.</string>
     <string name="error_unknown">Ocorreu um erro inesperado.</string>
+    <string name="error_too_many_requests">Muitas tentativas. Por favor, tente novamente mais tarde.</string>
 
     <!-- Screens -->
     <string name="home_title">Esta é a Tela Inicial</string>
@@ -98,4 +99,6 @@
     <string name="label_unknown_device">Dispositivo Desconhecido</string>
     <string name="label_unknown">Desconhecido</string>
     <string name="msg_invalid_current_password">A senha atual está incorreta ou a sessão expirou.</string>
+    <string name="error_invalid_password">A senha atual está incorreta.</string>
+    <string name="error_password_too_short">A nova senha deve ter pelo menos 8 caracteres.</string>
 </resources>

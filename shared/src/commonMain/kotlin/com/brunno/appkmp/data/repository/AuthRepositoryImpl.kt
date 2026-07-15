@@ -1,18 +1,18 @@
 package com.brunno.appkmp.data.repository
 
+import com.brunno.appkmp.data.local.SessionDao
 import com.brunno.appkmp.data.local.UserDao
 import com.brunno.appkmp.data.local.UserEntity
+import com.brunno.appkmp.data.local.toDomain
+import com.brunno.appkmp.data.local.toEntity
 import com.brunno.appkmp.data.remote.AuthApi
 import com.brunno.appkmp.data.remote.models.*
+import com.brunno.appkmp.data.remote.parseNetworkError
 import com.brunno.appkmp.domain.error.AppError
 import com.brunno.appkmp.domain.error.AppResult
 import com.brunno.appkmp.domain.error.AuthError
-import com.brunno.appkmp.domain.error.NetworkError
 import com.brunno.appkmp.domain.repository.AuthRepository
 import com.russhwolf.settings.Settings
-import io.ktor.client.plugins.ClientRequestException
-import io.ktor.client.statement.bodyAsText
-import io.ktor.utils.io.errors.IOException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.map
 class AuthRepositoryImpl(
     private val api: AuthApi,
     private val dao: UserDao,
+    private val sessionDao: SessionDao,
     private val settings: Settings
 ) : AuthRepository {
 
@@ -37,13 +38,54 @@ class AuthRepositoryImpl(
         return settings.getStringOrNull(PREF_AUTH_TOKEN)
     }
 
+    override fun observeActiveSessions(): Flow<List<ActiveSession>> {
+        return sessionDao.observeAllSessions().map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
+
+    override suspend fun syncActiveSessions(): AppResult<Unit, AppError> {
+        return try {
+            val sessions = api.listSessions()
+            sessionDao.clearAll()
+            sessionDao.insertAll(sessions.mapNotNull { it.toEntity() })
+            AppResult.Success(Unit)
+        } catch (e: Exception) {
+            AppResult.Error(parseNetworkError(e))
+        }
+    }
+
+    override suspend fun revokeSession(token: String): AppResult<Unit, AppError> {
+        return try {
+            api.revokeSession(RevokeSessionRequest(token))
+            sessionDao.deleteByToken(token)
+            AppResult.Success(Unit)
+        } catch (e: Exception) {
+            AppResult.Error(parseNetworkError(e))
+        }
+    }
+
+    override suspend fun logout() {
+        try {
+            api.logout()
+        } catch (e: Exception) {
+            // Ignorado em caso de falha de rede
+        } finally {
+            dao.clearSession()
+            sessionDao.clearAll()
+            settings.remove(PREF_AUTH_TOKEN)
+        }
+    }
+
     override suspend fun login(email: String, password: String): AppResult<Unit, AppError> {
         return try {
             val response = api.login(LoginRequest(email, password))
             saveSession(response)
             AppResult.Success(Unit)
+        } catch (e: InvalidSessionException) {
+            AppResult.Error(AuthError.UNAUTHORIZED)
         } catch (e: Exception) {
-            AppResult.Error(handleException(e))
+            AppResult.Error(parseNetworkError(e))
         }
     }
 
@@ -52,8 +94,10 @@ class AuthRepositoryImpl(
             val response = api.register(RegisterRequest(email = email, password = password, name = name))
             saveSession(response)
             AppResult.Success(Unit)
+        } catch (e: InvalidSessionException) {
+            AppResult.Error(AuthError.UNAUTHORIZED)
         } catch (e: Exception) {
-            AppResult.Error(handleException(e))
+            AppResult.Error(parseNetworkError(e))
         }
     }
 
@@ -62,7 +106,7 @@ class AuthRepositoryImpl(
             api.forgotPassword(ForgotPasswordRequest(email))
             AppResult.Success(Unit)
         } catch (e: Exception) {
-            AppResult.Error(handleException(e))
+            AppResult.Error(parseNetworkError(e))
         }
     }
 
@@ -71,7 +115,7 @@ class AuthRepositoryImpl(
             api.changePassword(ChangePasswordRequest(newPassword, currentPassword))
             AppResult.Success(Unit)
         } catch (e: Exception) {
-            AppResult.Error(handleException(e))
+            AppResult.Error(parseNetworkError(e))
         }
     }
 
@@ -87,36 +131,7 @@ class AuthRepositoryImpl(
             }
             AppResult.Success(Unit)
         } catch (e: Exception) {
-            AppResult.Error(handleException(e))
-        }
-    }
-
-    override suspend fun getActiveSessions(): AppResult<List<ActiveSession>, AppError> {
-        return try {
-            val sessions = api.listSessions()
-            AppResult.Success(sessions)
-        } catch (e: Exception) {
-            AppResult.Error(handleException(e))
-        }
-    }
-
-    override suspend fun revokeSession(token: String): AppResult<Unit, AppError> {
-        return try {
-            api.revokeSession(RevokeSessionRequest(token))
-            AppResult.Success(Unit)
-        } catch (e: Exception) {
-            AppResult.Error(handleException(e))
-        }
-    }
-
-    override suspend fun logout() {
-        try {
-            api.logout()
-        } catch (e: Exception) {
-            // Se falhar (ex: sem internet), forçamos a limpeza local abaixo
-        } finally {
-            dao.clearSession()
-            settings.remove(PREF_AUTH_TOKEN)
+            AppResult.Error(parseNetworkError(e))
         }
     }
 
@@ -135,29 +150,5 @@ class AuthRepositoryImpl(
         )
 
         dao.insertUser(user)
-    }
-
-    private suspend fun handleException(e: Exception): AppError {
-        return when (e) {
-            is IOException -> NetworkError.NO_INTERNET
-            is ClientRequestException -> {
-                val status = e.response.status.value
-                val errorBody = try { e.response.bodyAsText() } catch (ex: Exception) { "" }
-
-                when (status) {
-                    401, 403 -> {
-                        if (errorBody.contains("UNAUTHORIZED") || errorBody.contains("Session")) {
-                            AuthError.UNAUTHORIZED
-                        } else {
-                            AuthError.INVALID_CREDENTIALS
-                        }
-                    }
-                    404 -> NetworkError.SERVER_ERROR
-                    else -> NetworkError.SERVER_ERROR
-                }
-            }
-            is InvalidSessionException -> AuthError.UNAUTHORIZED
-            else -> NetworkError.UNKNOWN
-        }
     }
 }

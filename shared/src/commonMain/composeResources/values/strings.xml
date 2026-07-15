@@ -10,6 +10,7 @@
     <string name="error_no_internet">No internet connection. Please check your network.</string>
     <string name="error_server">We are experiencing instability. Try again later.</string>
     <string name="error_unknown">An unexpected error occurred.</string>
+    <string name="error_too_many_requests">Too many requests. Please try again later.</string>
 
     <!-- Screens -->
     <string name="home_title">This is the Home Screen</string>
@@ -98,4 +99,6 @@
     <string name="label_unknown_device">Unknown Device</string>
     <string name="label_unknown">Unknown</string>
     <string name="msg_invalid_current_password">The current password is incorrect or session expired.</string>
+    <string name="error_invalid_password">The current password is incorrect.</string>
+    <string name="error_password_too_short">The new password must be at least 8 characters long.</string>
 </resources>
