@@ -6,6 +6,7 @@ import com.brunno.appkmp.data.local.AppDatabase
 import com.brunno.appkmp.data.repository.AuthRepositoryImpl
 import com.brunno.appkmp.domain.repository.AuthRepository
 import com.brunno.appkmp.presentation.viewmodels.AuthViewModel
+import com.brunno.appkmp.presentation.viewmodels.ThemeViewModel
 import org.koin.core.module.dsl.viewModelOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -28,6 +29,8 @@ val appModule = module {
     single<AuthRepository> { AuthRepositoryImpl(api = get(), dao = get(), settings = get()) }
 
     viewModelOf(::AuthViewModel)
+
+    viewModelOf(::ThemeViewModel)
 }
 
 fun initKoin(baseUrl: String, appDeclaration: KoinAppDeclaration = {}) {

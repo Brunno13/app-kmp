@@ -1,5 +1,6 @@
 package com.brunno.appkmp
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -7,11 +8,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.brunno.appkmp.domain.enums.ThemeMode
 import com.brunno.appkmp.presentation.navigation.Routes
 import com.brunno.appkmp.presentation.screens.EditProfileScreen
 import com.brunno.appkmp.presentation.screens.ForgotPasswordScreen
@@ -21,12 +25,27 @@ import com.brunno.appkmp.presentation.screens.ProfileScreen
 import com.brunno.appkmp.presentation.screens.RegisterScreen
 import com.brunno.appkmp.presentation.screens.SecurityScreen
 import com.brunno.appkmp.presentation.theme.AppTheme
+import com.brunno.appkmp.presentation.viewmodels.ThemeViewModel
 import kmpprojectbrunno.shared.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun App() {
-    AppTheme {
+    // Inicializamos a ViewModel do Tema na raiz do App
+    val themeViewModel: ThemeViewModel = koinViewModel()
+    val themeMode by themeViewModel.themeMode.collectAsState()
+
+    // Calculamos o tema atual com base na escolha do utilizador e do sistema
+    val isSystemDark = isSystemInDarkTheme()
+    val useDarkTheme = when (themeMode) {
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+        ThemeMode.AUTO -> isSystemDark
+    }
+
+    // Passamos o useDarkTheme para o seu AppTheme Global
+    AppTheme(useDarkTheme = useDarkTheme) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = androidx.compose.material3.MaterialTheme.colorScheme.background
@@ -118,9 +137,11 @@ fun App() {
                         },
                         onLogoutSuccess = {
                             navController.navigate(Routes.LOGIN) {
-                                popUpTo(Routes.HOME) { inclusive = true }
+                                popUpTo(0) { inclusive = true }
                             }
-                        }
+                        },
+                        // 🔥 SOLUÇÃO: Partilhamos a mesma instância da ViewModel com a tela de perfil!
+                        themeViewModel = themeViewModel
                     )
                 }
 

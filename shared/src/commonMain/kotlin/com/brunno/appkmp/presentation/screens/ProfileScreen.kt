@@ -20,11 +20,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.brunno.appkmp.domain.enums.ThemeMode
 import com.brunno.appkmp.presentation.components.AppBottomBar
 import com.brunno.appkmp.presentation.components.AppButton
 import com.brunno.appkmp.presentation.components.MenuCard
 import com.brunno.appkmp.presentation.navigation.Routes
 import com.brunno.appkmp.presentation.viewmodels.AuthViewModel
+import com.brunno.appkmp.presentation.viewmodels.ThemeViewModel
 import kmpprojectbrunno.shared.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -36,10 +38,11 @@ fun ProfileScreen(
     onNavigateToEditProfile: () -> Unit,
     onNavigateToSecurity: () -> Unit,
     onLogoutSuccess: () -> Unit,
-    viewModel: AuthViewModel = koinViewModel()
+    authViewModel: AuthViewModel = koinViewModel(),
+    themeViewModel: ThemeViewModel = koinViewModel()
 ) {
-    val currentUser by viewModel.currentUser.collectAsState()
-    var selectedTheme by remember { mutableStateOf("AUTO") }
+    val currentUser by authViewModel.currentUser.collectAsState()
+    val themeMode by themeViewModel.themeMode.collectAsState()
     var offlineMode by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -110,9 +113,24 @@ fun ProfileScreen(
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            ThemeOptionButton(text = stringResource(Res.string.theme_light).uppercase(), isSelected = selectedTheme == "LIGHT", onClick = { selectedTheme = "LIGHT" }, modifier = Modifier.weight(1f))
-                            ThemeOptionButton(text = stringResource(Res.string.theme_dark).uppercase(), isSelected = selectedTheme == "DARK", onClick = { selectedTheme = "DARK" }, modifier = Modifier.weight(1f))
-                            ThemeOptionButton(text = stringResource(Res.string.theme_auto).uppercase(), isSelected = selectedTheme == "AUTO", onClick = { selectedTheme = "AUTO" }, modifier = Modifier.weight(1f))
+                            ThemeOptionButton(
+                                text = stringResource(Res.string.theme_light).uppercase(),
+                                isSelected = themeMode == ThemeMode.LIGHT,
+                                onClick = { themeViewModel.setTheme(ThemeMode.LIGHT) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            ThemeOptionButton(
+                                text = stringResource(Res.string.theme_dark).uppercase(),
+                                isSelected = themeMode == ThemeMode.DARK,
+                                onClick = { themeViewModel.setTheme(ThemeMode.DARK) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            ThemeOptionButton(
+                                text = stringResource(Res.string.theme_auto).uppercase(),
+                                isSelected = themeMode == ThemeMode.AUTO,
+                                onClick = { themeViewModel.setTheme(ThemeMode.AUTO) },
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
                 }
@@ -131,7 +149,7 @@ fun ProfileScreen(
                 AppButton(
                     text = stringResource(Res.string.action_sign_out),
                     onClick = {
-                        viewModel.logout {
+                        authViewModel.logout {
                             onLogoutSuccess()
                         }
                     },
