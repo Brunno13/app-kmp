@@ -6,18 +6,15 @@ ENV="${APP_ENV:-production}"
 
 if [ "$ENV" = "staging" ]; then
     echo "🤖 [Staging] Compilando o APK Android..."
-    # Executa a task gerada pelo flavor "staging"
-    ./gradlew :composeApp:assembleStagingRelease
+    ./gradlew :androidApp:assembleStagingRelease
 
-    # O Gradle coloca o APK numa subpasta com o nome do flavor
-    APK_PATH="composeApp/build/outputs/apk/staging/release/composeApp-staging-release.apk"
+    APK_PATH="androidApp/build/outputs/apk/staging/release/androidApp-staging-release.apk"
     OUTPUT_NAME="app-kmp-staging.apk"
 else
     echo "🤖 [Production] Compilando o APK Android..."
-    # Executa a task gerada pelo flavor "production"
-    ./gradlew :composeApp:assembleProductionRelease
+    ./gradlew :androidApp:assembleProductionRelease
 
-    APK_PATH="composeApp/build/outputs/apk/production/release/composeApp-production-release.apk"
+    APK_PATH="androidApp/build/outputs/apk/production/release/androidApp-production-release.apk"
     OUTPUT_NAME="app-kmp-production.apk"
 fi
 
@@ -27,5 +24,7 @@ if [ -f "$APK_PATH" ]; then
     echo "✅ Build Android finalizado com sucesso! Artefato: ./$OUTPUT_NAME"
 else
     echo "❌ ERRO: O APK não foi encontrado no caminho esperado ($APK_PATH)."
+    echo "Listando o diretório de outputs para depuração:"
+    ls -lah androidApp/build/outputs/apk/ || true
     exit 1
 fi
