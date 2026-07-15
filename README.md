@@ -141,3 +141,114 @@ To maintain clean, scalable, and loosely coupled code across platforms, we follo
 **3. Smart Hybrid Persistence (Single Source of Truth)**
 * **Cache and Offline Mode:** The UI strictly observes the local database (`Room Multiplatform` + `Bundled SQLite`). The network (`Ktorfit`) updates the database in the background, and the database reactively updates the UI via `StateFlow`.
 * **Security:** Session tokens and sensitive keys are never saved in plain text or standard DBs. They are stored using device-native encryption (`Keychain` on iOS, `EncryptedSharedPreferences` on Android) abstracted via `expect/actual` or Multiplatform Settings.
+
+---
+
+## 🚀 How to Run and Build Locally
+
+### Prerequisites
+* **Java Development Kit (JDK 17+)** installed.
+* **For Android:** Android Studio configured with a Virtual Device (Emulator) or a physical Android device connected.
+* **For iOS (macOS only):** Xcode installed, Command Line Tools configured, and the iOS Simulator active.
+
+### 💻 Development Mode (Live Reload & Debugging)
+
+Since this is a Kotlin Multiplatform project, the best development experience is achieved using **Android Studio** (with the KMP plugin) or **JetBrains Fleet**.
+
+1. **Android (Staging/Production):**
+    * Open the project in Android Studio.
+    * Select the `composeApp` run configuration.
+    * Choose your active Build Variant (e.g., `stagingDebug` or `productionDebug`).
+    * Click **Run** (Shift + F10) to deploy to the Emulator.
+    * *Alternatively, via CLI:*
+   
+      ```bash
+      ./gradlew :composeApp:installStagingDebug
+      ```
+
+2. **iOS:**
+    * Open the project in Android Studio and select the `iosApp` run configuration.
+    * *Alternatively, via Xcode:* Open `iosApp/iosApp.xcodeproj` in Xcode, select your target simulator, and click **Run** (Cmd + R).
+
+### 📦 Generating Binaries Locally
+Automated bash scripts detect the environment and configure local build tasks via Gradle. Ensure your scripts have execution permissions (`chmod +x scripts/*.sh`).
+
+#### 🤖 Android (APK Generation via Gradle)
+The script automatically selects the correct Gradle product flavor (`staging` or `production`) based on the environment variable.
+
+* **Generate Staging APK (Allows local HTTP APIs):**
+
+    ```bash
+    APP_ENV=staging ./scripts/build_android.sh
+    ```
+
+* **Generate Production APK (Requires secure HTTPS):**
+
+    ```bash
+    APP_ENV=production ./scripts/build_android.sh
+    ```
+  
+* **Result:** Files will be exported to the project root as `app-kmp-staging.apk` or `app-kmp-production.apk`.
+
+#### 🍎 iOS (Framework Generation via Kotlin Native)
+*Requires macOS*. The script runs the Kotlin Native compiler to link the Release Framework.
+
+* **Generate Staging iOS package:**
+
+    ```bash
+    APP_ENV=staging ./scripts/build_ios.sh
+    ```
+
+* **Generate Production iOS package:**
+
+    ```bash
+    APP_ENV=production ./scripts/build_ios.sh
+    ```
+  
+* **Result:** The compiled framework will be compressed and exported to the root as `app-kmp-ios-staging.zip` or `app-kmp-ios-production.zip`.
+
+### 🧪 Testing & Linting
+
+#### **Code Quality (Lint)**
+Run the linter to verify architecture and code formatting rules:
+
+
+    ./scripts/lint.sh
+
+
+#### **Unit & Integration Tests**
+Run the fast unit and integration tests across the shared Kotlin codebase:
+
+
+    ./scripts/test.sh
+
+
+---
+
+## 📦 CI/CD, Automation and Mirroring
+
+The Woodpecker CI pipeline (`.woodpecker/release.yml`) automates APK/Framework generation, artifact packaging, and repository mirroring.
+
+**Release Pipeline Workflow:**
+1. **Trigger:** Creation of a Tag (e.g., `v1.0.5`) on Gitea starts the production pipeline.
+2. **Native Agent:** Execution occurs on a macOS agent (`darwin/arm64`) to enable Apple Silicon processing and iOS compilation.
+3. **Dual Compilation:**
+    * Injection of the `APP_ENV=production` variable.
+    * **Android:** Executes `./scripts/build_android.sh` to package the Release APK.
+    * **iOS:** Executes `./scripts/build_ios.sh` to compile the Kotlin Native framework.
+4. **Internal Release:** Woodpecker generates the git changelog, creates a versioned Release on the internal Gitea server, and attaches the compiled artifacts (`.apk` and `.zip`).
+5. **Mirroring (GitHub):** The source code associated with the Tag is forcibly pushed to GitHub, where an identical public Release is created via API, attaching the same binaries.
+
+**Staging Pipeline Workflow (`.woodpecker/test.yml`):**
+* Runs automatically on every push to the `main` branch.
+* Executes Linter and Unit Tests.
+* Ensures code health before any manual merges or production tags.
+
+---
+
+## 🔐 Security and Local Traffic
+
+* **In Staging (`.staging` flavor):** The app allows cleartext HTTP traffic to enable communication with local development servers and staging APIs without SSL certificates.
+* **In Production:** Builds enforce secure HTTPS connections for all remote communications.
+
+---

@@ -1,0 +1,225 @@
+when:
+  - event: tag
+
+labels:
+  platform: darwin/arm64
+
+steps:
+  # =========================================================
+  # NOTIFICAÇÃO DE INÍCIO
+  # =========================================================
+  - name: notify-start
+    image: bash
+    commands:
+      - |
+        TIMESTAMP="$(TZ=America/Sao_Paulo date '+%d/%m/%Y %H:%M')"
+        curl -fsS \
+          --connect-timeout 5 \
+          --max-time 10 \
+          --output /dev/null \
+          -X POST \
+          "http://192.168.31.215:8095/message?token=A6vmGBx46fXa5Iv" \
+          -F "title=WoodpeckerCI" \
+          -F "message=WoodpeckerCI · App-KMP · Production pipeline started · Tag ${CI_COMMIT_TAG} · $${TIMESTAMP}" \
+          -F "priority=5" \
+          || true
+
+  # =========================================================
+  # FASE 1: TESTES E BUILD DOS ARTEFATOS (VIA SCRIPTS)
+  # =========================================================
+  - name: build-artifacts
+    image: bash
+    environment:
+      # Adicione variáveis de ambiente globais aqui, se necessário (ex: API Keys de prod)
+      APP_ENV: "production"
+    commands:
+      - echo "🔧 Configurando permissões..."
+      - chmod +x ./gradlew
+      - chmod +x ./scripts/*.sh
+
+      - echo "🧹 Verificando código (Lint)..."
+      - ./scripts/lint.sh
+
+      - echo "🧪 Executando testes..."
+      - ./scripts/test.sh
+
+      - echo "🤖 Compilando o APK Android de Produção..."
+      - ./scripts/build_android.sh
+
+      - echo "🍎 Compilando o pacote iOS de Produção..."
+      - ./scripts/build_ios.sh
+
+  # =========================================================
+  # FASE 2: RELEASE NO GITEA
+  # =========================================================
+  - name: gerar-release-notes
+    image: bash
+    environment:
+      GITEA_TOKEN:
+        from_secret: gitea_token
+    commands:
+      - |
+        set -e
+        git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+        git fetch --all --unshallow || git fetch --all
+        git fetch --tags
+
+        PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+        if [ -z "$PREV_TAG" ]; then
+          CHANGELOG=$(git log --pretty=format:"- %h %s")
+        else
+          CHANGELOG=$(git log --pretty=format:"- %h %s" "${PREV_TAG}..HEAD")
+        fi
+
+        RELEASE_BODY=$(printf '🚀 Deploy automático multiplataforma Android e iOS (KMP) realizado nativamente pelo Apple Silicon M1.\n\n---\n\n%s' "$CHANGELOG")
+        printf '%s\n' "$RELEASE_BODY" > .release_body.txt
+
+        JSON_PAYLOAD=$(jq -n \
+          --arg tag "${CI_COMMIT_TAG}" \
+          --arg name "Versão ${CI_COMMIT_TAG}" \
+          --arg body "$RELEASE_BODY" \
+          '{ tag_name: $tag, name: $name, body: $body }')
+
+        echo "=== ENVIANDO RELEASE PARA O GITEA ==="
+        RESPONSE=$(curl -s -X POST "http://192.168.31.215:3099/api/v1/repos/${CI_REPO_OWNER}/${CI_REPO_NAME}/releases" \
+          -H "Accept: application/json" \
+          -H "Authorization: token $GITEA_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d "$JSON_PAYLOAD")
+
+        RELEASE_ID=$(printf '%s' "$RESPONSE" | jq -r '.id')
+
+        if [ "$RELEASE_ID" = "null" ] || [ -z "$RELEASE_ID" ]; then
+          echo "❌ ERRO: O Gitea não retornou um ID válido."
+          echo "Resposta recebida: $RESPONSE"
+          exit 1
+        fi
+
+        echo "=== VERIFICANDO ARTEFATOS ==="
+        # Nossos scripts devem ter copiado os artefatos compilados para a raiz do projeto com estes nomes
+        ls -lah ./app-kmp-production.apk ./app-kmp-ios-production.zip
+
+        echo "=== INICIANDO UPLOAD DOS ARTEFATOS PARA O GITEA ==="
+        curl -fsS -X POST "http://192.168.31.215:3099/api/v1/repos/${CI_REPO_OWNER}/${CI_REPO_NAME}/releases/${RELEASE_ID}/assets?name=app-kmp-production.apk" \
+          -H "Authorization: token $GITEA_TOKEN" \
+          -F "attachment=@./app-kmp-production.apk"
+
+        curl -fsS -X POST "http://192.168.31.215:3099/api/v1/repos/${CI_REPO_OWNER}/${CI_REPO_NAME}/releases/${RELEASE_ID}/assets?name=app-kmp-ios-production.zip" \
+          -H "Authorization: token $GITEA_TOKEN" \
+          -F "attachment=@./app-kmp-ios-production.zip"
+
+        echo "✅ DEPLOY FINALIZADO COM SUCESSO NO GITEA!"
+
+  # =========================================================
+  # FASE 3: ESPELHAMENTO PARA O GITHUB
+  # =========================================================
+  - name: espelhar-github
+    image: bash
+    environment:
+      GITHUB_USER: Brunno13
+      GITHUB_TOKEN:
+        from_secret: github_token
+    commands:
+      - echo "=== SINCRONIZANDO REPOSITÓRIO COM O GITHUB ==="
+      - git config --global --add safe.directory "*"
+      - git config --global http.postBuffer 524288000
+      - GIT_TERMINAL_PROMPT=0 git -c credential.helper= push https://$${GITHUB_TOKEN}@github.com/$${GITHUB_USER}/${CI_REPO_NAME}.git HEAD:main --force
+      - GIT_TERMINAL_PROMPT=0 git -c credential.helper= push https://$${GITHUB_TOKEN}@github.com/$${GITHUB_USER}/${CI_REPO_NAME}.git ${CI_COMMIT_TAG} --force
+
+  # =========================================================
+  # FASE 4: RELEASE NO GITHUB
+  # =========================================================
+  - name: criar-release-github
+    image: bash
+    environment:
+      GITHUB_USER: Brunno13
+      GITHUB_TOKEN:
+        from_secret: github_token
+    commands:
+      - |
+        set -e
+        echo "=== CRIANDO RELEASE NO GITHUB ==="
+        GITHUB_API_URL="https://api.github.com/repos/${GITHUB_USER}/${CI_REPO_NAME}/releases"
+
+        if [ -f .release_body.txt ]; then
+          RELEASE_BODY=$(cat .release_body.txt)
+        else
+          RELEASE_BODY="🚀 Lançamento automatizado KMP sincronizado a partir do servidor Gitea interno."
+        fi
+
+        JSON_PAYLOAD=$(jq -n \
+          --arg tag "${CI_COMMIT_TAG}" \
+          --arg name "Versão ${CI_COMMIT_TAG}" \
+          --arg body "$RELEASE_BODY" \
+          '{ tag_name: $tag, name: $name, body: $body }')
+
+        RESPONSE=$(curl -s -X POST "$GITHUB_API_URL" \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer $GITHUB_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d "$JSON_PAYLOAD")
+
+        RELEASE_ID=$(printf '%s' "$RESPONSE" | jq -r '.id')
+
+        if [ "$RELEASE_ID" = "null" ] || [ -z "$RELEASE_ID" ]; then
+          echo "❌ ERRO: O GitHub não retornou um ID válido."
+          echo "Resposta recebida: $RESPONSE"
+          exit 1
+        fi
+
+        echo "=== INICIANDO UPLOAD DOS ARTEFATOS NO GITHUB ==="
+        GH_UPLOAD_URL="https://uploads.github.com/repos/${GITHUB_USER}/${CI_REPO_NAME}/releases/${RELEASE_ID}/assets"
+
+        curl -fsS -X POST "${GH_UPLOAD_URL}?name=app-kmp-production.apk" \
+          -H "Authorization: Bearer $GITHUB_TOKEN" \
+          -H "Content-Type: application/vnd.android.package-archive" \
+          --data-binary "@./app-kmp-production.apk"
+
+        curl -fsS -X POST "${GH_UPLOAD_URL}?name=app-kmp-ios-production.zip" \
+          -H "Authorization: Bearer $GITHUB_TOKEN" \
+          -H "Content-Type: application/zip" \
+          --data-binary "@./app-kmp-ios-production.zip"
+
+        echo "✅ RELEASE NO GITHUB CRIADA COM SUCESSO!"
+
+  # =========================================================
+  # NOTIFICAÇÕES FINAIS
+  # =========================================================
+  - name: notify-success
+    image: bash
+    commands:
+      - |
+        TIMESTAMP="$(TZ=America/Sao_Paulo date '+%d/%m/%Y %H:%M')"
+        curl -fsS \
+          --connect-timeout 5 \
+          --max-time 10 \
+          --output /dev/null \
+          -X POST \
+          "http://192.168.31.215:8095/message?token=A6vmGBx46fXa5Iv" \
+          -F "title=WoodpeckerCI" \
+          -F "message=WoodpeckerCI · App-KMP · Production pipeline finished successfully · Tag ${CI_COMMIT_TAG} · $${TIMESTAMP}" \
+          -F "priority=5" \
+          || true
+    when:
+      - event: tag
+        status: [success]
+
+  - name: notify-error
+    image: bash
+    commands:
+      - |
+        TIMESTAMP="$(TZ=America/Sao_Paulo date '+%d/%m/%Y %H:%M')"
+        curl -fsS \
+          --connect-timeout 5 \
+          --max-time 10 \
+          --output /dev/null \
+          -X POST \
+          "http://192.168.31.215:8095/message?token=A6vmGBx46fXa5Iv" \
+          -F "title=WoodpeckerCI" \
+          -F "message=WoodpeckerCI · App-KMP · Production pipeline failed · Tag ${CI_COMMIT_TAG} · $${TIMESTAMP}" \
+          -F "priority=8" \
+          || true
+    when:
+      - event: tag
+        status: [failure]

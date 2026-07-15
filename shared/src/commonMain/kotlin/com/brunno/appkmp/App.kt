@@ -32,11 +32,8 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun App() {
-    // Inicializamos a ViewModel do Tema na raiz do App
     val themeViewModel: ThemeViewModel = koinViewModel()
     val themeMode by themeViewModel.themeMode.collectAsState()
-
-    // Calculamos o tema atual com base na escolha do utilizador e do sistema
     val isSystemDark = isSystemInDarkTheme()
     val useDarkTheme = when (themeMode) {
         ThemeMode.LIGHT -> false
@@ -44,7 +41,6 @@ fun App() {
         ThemeMode.AUTO -> isSystemDark
     }
 
-    // Passamos o useDarkTheme para o seu AppTheme Global
     AppTheme(useDarkTheme = useDarkTheme) {
         Surface(
             modifier = Modifier.fillMaxSize(),
@@ -140,7 +136,6 @@ fun App() {
                                 popUpTo(0) { inclusive = true }
                             }
                         },
-                        // 🔥 SOLUÇÃO: Partilhamos a mesma instância da ViewModel com a tela de perfil!
                         themeViewModel = themeViewModel
                     )
                 }
