@@ -8,23 +8,29 @@ if [ "$ENV" = "staging" ]; then
     echo "🤖 [Staging] Compilando o APK Android..."
     ./gradlew :androidApp:assembleStagingRelease
 
-    APK_PATH="androidApp/build/outputs/apk/staging/release/androidApp-staging-release.apk"
+    APK_DIR="androidApp/build/outputs/apk/staging/release"
     OUTPUT_NAME="app-kmp-staging.apk"
 else
     echo "🤖 [Production] Compilando o APK Android..."
     ./gradlew :androidApp:assembleProductionRelease
 
-    APK_PATH="androidApp/build/outputs/apk/production/release/androidApp-production-release.apk"
+    APK_DIR="androidApp/build/outputs/apk/production/release"
     OUTPUT_NAME="app-kmp-production.apk"
 fi
 
-# Verifica se o APK foi realmente gerado antes de copiar
-if [ -f "$APK_PATH" ]; then
-    cp "$APK_PATH" "./$OUTPUT_NAME"
-    echo "✅ Build Android finalizado com sucesso! Artefato: ./$OUTPUT_NAME"
+# Procura o primeiro ficheiro .apk dentro do diretório gerado,
+# ignorando se tem o sufixo "-unsigned" ou não.
+APK_FILE=$(ls $APK_DIR/*.apk 2>/dev/null | head -n 1 || true)
+
+# Verifica se o ficheiro foi encontrado e se realmente existe
+if [ -n "$APK_FILE" ] && [ -f "$APK_FILE" ]; then
+    # Move o APK para a raiz com o nome esperado pela pipeline
+    cp "$APK_FILE" "./$OUTPUT_NAME"
+    echo "✅ Build Android finalizado com sucesso!"
+    echo "📦 Artefato disponível na raiz: ./$OUTPUT_NAME"
 else
-    echo "❌ ERRO: O APK não foi encontrado no caminho esperado ($APK_PATH)."
-    echo "Listando o diretório de outputs para depuração:"
-    ls -lah androidApp/build/outputs/apk/ || true
+    echo "❌ ERRO: Nenhum ficheiro APK encontrado na pasta ($APK_DIR)."
+    echo "Listando recursivamente a árvore de outputs para depuração:"
+    find androidApp/build/outputs/apk/ -type f || true
     exit 1
 fi
