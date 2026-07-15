@@ -27,16 +27,17 @@ A cross-platform mobile application (Android and iOS) built with **Kotlin Multip
 - [x] **Local Persistence:** Room Multiplatform database setup and entity schemas.
 - [x] **Network Layer:** Ktorfit configuration and API route mapping (`/sign-in`, etc).
 - [x] **Hybrid Repositories:** Priority logic implementation (fetch locally from Room or fetch from Ktorfit and save locally).
-- [x] **Flavors:** Environment variable configuration (Staging/Production) directly in Gradle Build Variants and Swift Macros.
-- [x] **Authentication UI:** Development of login screens and error mapping.
+- [x] **Flavors:** Environment variable configuration (Staging/Production) directly in Gradle Build Variants.
+- [x] **Authentication UI:** Development of login screens, active session management, and error mapping.
 - [x] **State Management:** ViewModel construction based on `StateFlow`.
 - [x] **Secure Storage:** Keychain (iOS) and EncryptedSharedPreferences (Android) configuration for authentication tokens.
 - [x] **Global Localization & Error Handling:** Implementation of Compose Resources for i18n (En/Pt), centralized navigation constants (`Routes`), and strongly typed error mapping (`AppError`) from Domain to UI.
 - [x] **Design System:** Creation of reusable visual components using Compose, including global theming (Colors, Shapes, Dimens) and shared widgets (`AppButton`, `AppTextField`, `MenuCard`).
+- [x] **User Preferences & Theming:** Global dynamic theme engine (Light/Dark/Auto) linked to multiplatform `Settings` and State hoisting at the app root level.
+- [x] **CI/CD Automation:** Woodpecker CI pipelines (`release` and `test`) running via local macOS agent, powered by Bash scripts mapping Gradle tasks for APK generation and Kotlin Native iOS compilation.
 
 ### ⏳ Next Steps
 - [ ] **Native Integration:** Biometrics implementation via `expect/actual` (Face ID / Touch ID).
-- [ ] **CI/CD Migration:** Adaptation of Woodpecker CI routines to run `./gradlew assemble` and `xcodebuild`.
 - [ ] **E2E Testing:** Creation of interactive test flows using Maestro scripts.
 
 ---
