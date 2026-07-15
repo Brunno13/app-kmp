@@ -86,4 +86,16 @@
 
     <string name="tab_home">Home</string>
     <string name="tab_profile">Profile</string>
+
+    <!-- Forgot Password Screen -->
+    <string name="msg_reset_link_sent">A password reset link has been sent to your email.</string>
+
+    <!-- Security Screen (Active Sessions Placeholder) -->
+    <string name="empty_sessions_title">No other sessions found</string>
+    <string name="empty_sessions_desc">Session data is not available yet.</string>
+    <string name="action_revoke_session">Revoke Session</string>
+    <string name="msg_password_updated">Password successfully updated!</string>
+    <string name="label_unknown_device">Unknown Device</string>
+    <string name="label_unknown">Unknown</string>
+    <string name="msg_invalid_current_password">The current password is incorrect or session expired.</string>
 </resources>

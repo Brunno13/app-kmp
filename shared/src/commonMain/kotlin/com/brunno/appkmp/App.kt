@@ -58,6 +58,11 @@ fun App() {
                     RegisterScreen(
                         onNavigateToLogin = {
                             navController.popBackStack()
+                        },
+                        onRegisterSuccess = {
+                            navController.navigate(Routes.HOME) {
+                                popUpTo(0)
+                            }
                         }
                     )
                 }
@@ -127,7 +132,12 @@ fun App() {
 
                 composable(Routes.SECURITY) {
                     SecurityScreen(
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStack() },
+                        onLogoutSuccess = {
+                            navController.navigate(Routes.LOGIN) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        }
                     )
                 }
 

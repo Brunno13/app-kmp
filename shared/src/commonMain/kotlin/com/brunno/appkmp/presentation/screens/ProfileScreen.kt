@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Brightness4
@@ -70,14 +69,14 @@ fun ProfileScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = currentUser?.name ?: "Brunno Santos da Silva",
+                    text = currentUser?.name ?: "...",
                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = currentUser?.email ?: "java.brunno@gmail.com",
+                    text = currentUser?.email ?: "...",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyLarge
                 )
@@ -132,8 +131,9 @@ fun ProfileScreen(
                 AppButton(
                     text = stringResource(Res.string.action_sign_out),
                     onClick = {
-                        viewModel.logout()
-                        onLogoutSuccess()
+                        viewModel.logout {
+                            onLogoutSuccess()
+                        }
                     },
                     containerColor = MaterialTheme.colorScheme.error,
                     contentColor = MaterialTheme.colorScheme.onError

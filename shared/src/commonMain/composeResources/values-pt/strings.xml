@@ -86,4 +86,16 @@
 
     <string name="tab_home">Início</string>
     <string name="tab_profile">Perfil</string>
+
+    <!-- Forgot Password Screen -->
+    <string name="msg_reset_link_sent">Um link de redefinição de senha foi enviado para o seu e-mail.</string>
+
+    <!-- Security Screen (Active Sessions Placeholder) -->
+    <string name="empty_sessions_title">Nenhuma outra sessão encontrada</string>
+    <string name="empty_sessions_desc">Dados de sessão ainda não disponíveis.</string>
+    <string name="action_revoke_session">Encerrar Sessão</string>
+    <string name="msg_password_updated">Senha atualizada com sucesso!</string>
+    <string name="label_unknown_device">Dispositivo Desconhecido</string>
+    <string name="label_unknown">Desconhecido</string>
+    <string name="msg_invalid_current_password">A senha atual está incorreta ou a sessão expirou.</string>
 </resources>

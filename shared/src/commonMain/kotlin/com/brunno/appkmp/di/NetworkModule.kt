@@ -2,10 +2,14 @@ package com.brunno.appkmp.di
 
 import com.brunno.appkmp.data.remote.AuthApi
 import com.brunno.appkmp.data.remote.createAuthApi
+import com.russhwolf.settings.Settings
 import de.jensklingenberg.ktorfit.Ktorfit
 import io.ktor.client.HttpClient
+import io.ktor.client.plugins.ClientRequestException
+import io.ktor.client.plugins.HttpResponseValidator
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.request.header
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
@@ -16,20 +20,60 @@ import org.koin.dsl.module
 val networkModule = module {
 
     single {
+        val settings = get<Settings>()
+        val baseUrl = get<String>(named("baseUrl"))
+        val originUrl = if (baseUrl.endsWith("/")) baseUrl.dropLast(1) else baseUrl
+
         val client = HttpClient {
+            expectSuccess = true
+
             install(ContentNegotiation) {
                 json(Json {
                     ignoreUnknownKeys = true
                     isLenient = true
+                    explicitNulls = false
                 })
             }
 
             defaultRequest {
                 contentType(ContentType.Application.Json)
+                header("Origin", originUrl)
+            }
+
+            HttpResponseValidator {
+                validateResponse { response ->
+                    val setCookies = response.headers.getAll("Set-Cookie")
+                    if (!setCookies.isNullOrEmpty()) {
+                        val parsedCookies = setCookies.joinToString("; ") { it.substringBefore(";") }
+
+                        settings.putString("api_cookies", parsedCookies)
+                        println("🍪 COOKIES CAPTURADOS DO SERVIDOR: $parsedCookies")
+                    }
+                }
+
+                handleResponseExceptionWithRequest { exception, request ->
+                    if (exception is ClientRequestException) {
+                        println("❌ KTOR ERRO: ${request.url}")
+                        println("❌ STATUS: ${exception.response.status}")
+                    }
+                }
             }
         }
+
+        client.requestPipeline.intercept(io.ktor.client.request.HttpRequestPipeline.State) {
+            val cookies = settings.getStringOrNull("api_cookies")
+            if (!cookies.isNullOrBlank()) {
+                context.headers.append("Cookie", cookies)
+            }
+
+            val token = settings.getStringOrNull("auth_token")
+            if (!token.isNullOrBlank()) {
+                context.headers.append("Authorization", "Bearer $token")
+            }
+        }
+
         client.sendPipeline.intercept(io.ktor.client.request.HttpSendPipeline.Monitoring) {
-            println("➔ KTOR SENDING TO: ${context.url.buildString()}")
+            println("➔ KTOR REQUEST: ${context.method.value} ${context.url.buildString()}")
         }
 
         client
@@ -37,7 +81,6 @@ val networkModule = module {
 
     single {
         val httpClient = get<HttpClient>()
-
         val baseUrl = get<String>(named("baseUrl"))
 
         Ktorfit.Builder()

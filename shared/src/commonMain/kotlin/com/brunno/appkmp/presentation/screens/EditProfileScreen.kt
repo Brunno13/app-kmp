@@ -12,15 +12,32 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.brunno.appkmp.presentation.components.AppButton
 import com.brunno.appkmp.presentation.components.AppTextField
 import com.brunno.appkmp.presentation.components.AppTopBar
+import com.brunno.appkmp.presentation.theme.dimens
+import com.brunno.appkmp.presentation.utils.asString
+import com.brunno.appkmp.presentation.viewmodels.AuthViewModel
+import com.brunno.appkmp.presentation.viewmodels.LoginUiState
 import kmpprojectbrunno.shared.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun EditProfileScreen(onBack: () -> Unit) {
-    var name by remember { mutableStateOf("Brunno Santos da Silva") }
+fun EditProfileScreen(
+    onBack: () -> Unit,
+    viewModel: AuthViewModel = koinViewModel()
+) {
+    val currentUser by viewModel.currentUser.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
+
+    var name by remember(currentUser) { mutableStateOf(currentUser?.name ?: "") }
+
+    LaunchedEffect(uiState) {
+        if (uiState is LoginUiState.Success) {
+            viewModel.resetState()
+            onBack()
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -30,13 +47,18 @@ fun EditProfileScreen(onBack: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = MaterialTheme.dimens.screenPadding),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceExtraLarge))
 
             Box(contentAlignment = Alignment.BottomCenter) {
-                Box(modifier = Modifier.size(120.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant))
+                Box(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                )
 
                 Button(
                     onClick = { /* TODO */ },
@@ -45,11 +67,16 @@ fun EditProfileScreen(onBack: () -> Unit) {
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text(text = stringResource(Res.string.action_change_photo), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+                    Text(
+                        text = stringResource(Res.string.action_change_photo),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceXXL))
 
             Text(
                 text = stringResource(Res.string.title_update_profile),
@@ -57,13 +84,40 @@ fun EditProfileScreen(onBack: () -> Unit) {
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceLarge))
 
-            AppTextField(value = name, onValueChange = { name = it }, placeholder = "")
+            AppTextField(
+                value = name,
+                onValueChange = { name = it },
+                placeholder = stringResource(Res.string.placeholder_full_name)
+            )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceLarge))
 
-            AppButton(text = stringResource(Res.string.action_save_changes), onClick = { /* TODO */ })
+            if (uiState is LoginUiState.Error) {
+                Text(
+                    text = (uiState as LoginUiState.Error).error.asString(),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
+            }
+
+            Button(
+                onClick = { viewModel.updateUser(name) },
+                enabled = name.isNotBlank() && name != currentUser?.name && uiState !is LoginUiState.Loading,
+                modifier = Modifier.fillMaxWidth().height(MaterialTheme.dimens.buttonHeight),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                if (uiState is LoginUiState.Loading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(MaterialTheme.dimens.spaceLarge),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text(text = stringResource(Res.string.action_save_changes), fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 }

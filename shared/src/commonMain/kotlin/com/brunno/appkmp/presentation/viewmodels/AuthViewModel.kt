@@ -2,6 +2,7 @@ package com.brunno.appkmp.presentation.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.brunno.appkmp.data.remote.models.ActiveSession
 import com.brunno.appkmp.domain.error.AppError
 import com.brunno.appkmp.domain.error.AppResult
 import com.brunno.appkmp.domain.repository.AuthRepository
@@ -21,9 +22,10 @@ sealed interface LoginUiState {
 class AuthViewModel(
     private val authRepository: AuthRepository
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
     val uiState = _uiState.asStateFlow()
+    private val _activeSessions = MutableStateFlow<List<ActiveSession>>(emptyList())
+    val activeSessions = _activeSessions.asStateFlow()
 
     val currentUser = authRepository.observeCurrentUser()
         .stateIn(
@@ -32,26 +34,95 @@ class AuthViewModel(
             initialValue = null
         )
 
-    fun login(email: String, password: String) {
+    fun loadSessions() {
         viewModelScope.launch {
-            _uiState.value = LoginUiState.Loading
-
-            val result = authRepository.login(email, password)
-
-            when (result) {
+            when (val result = authRepository.getActiveSessions()) {
                 is AppResult.Success -> {
-                    _uiState.value = LoginUiState.Success
+                    _activeSessions.value = result.data
                 }
                 is AppResult.Error -> {
-                    _uiState.value = LoginUiState.Error(result.error)
+                    println("Falha silenciosa ao listar sessões: ${result.error}")
                 }
             }
         }
     }
 
-    fun logout() {
+    fun revokeSession(token: String, onCurrentSessionRevoked: () -> Unit) {
+        viewModelScope.launch {
+            val isCurrentSession = token == authRepository.getCurrentToken()
+            val currentList = _activeSessions.value
+            _activeSessions.value = currentList.filter { it.token != token }
+
+            when (authRepository.revokeSession(token)) {
+                is AppResult.Success -> {
+                    if (isCurrentSession) {
+                        authRepository.logout()
+                        resetState()
+                        onCurrentSessionRevoked()
+                    }
+                }
+                is AppResult.Error -> {
+                    _activeSessions.value = currentList
+                }
+            }
+        }
+    }
+
+    fun login(email: String, password: String) {
+        viewModelScope.launch {
+            _uiState.value = LoginUiState.Loading
+            when (val result = authRepository.login(email, password)) {
+                is AppResult.Success -> _uiState.value = LoginUiState.Success
+                is AppResult.Error -> _uiState.value = LoginUiState.Error(result.error)
+            }
+        }
+    }
+
+    fun register(name: String, email: String, password: String) {
+        viewModelScope.launch {
+            _uiState.value = LoginUiState.Loading
+            when (val result = authRepository.register(name, email, password)) {
+                is AppResult.Success -> _uiState.value = LoginUiState.Success
+                is AppResult.Error -> _uiState.value = LoginUiState.Error(result.error)
+            }
+        }
+    }
+
+    fun forgotPassword(email: String) {
+        viewModelScope.launch {
+            _uiState.value = LoginUiState.Loading
+            when (val result = authRepository.forgotPassword(email)) {
+                is AppResult.Success -> _uiState.value = LoginUiState.Success
+                is AppResult.Error -> _uiState.value = LoginUiState.Error(result.error)
+            }
+        }
+    }
+
+    fun updateUser(name: String) {
+        viewModelScope.launch {
+            _uiState.value = LoginUiState.Loading
+            when (val result = authRepository.updateUser(name)) {
+                is AppResult.Success -> _uiState.value = LoginUiState.Success
+                is AppResult.Error -> _uiState.value = LoginUiState.Error(result.error)
+            }
+        }
+    }
+
+    fun changePassword(current: String, new: String) {
+        viewModelScope.launch {
+            _uiState.value = LoginUiState.Loading
+            when (val result = authRepository.changePassword(current, new)) {
+                is AppResult.Success -> _uiState.value = LoginUiState.Success
+                is AppResult.Error -> _uiState.value = LoginUiState.Error(result.error)
+            }
+        }
+    }
+
+    fun logout(onComplete: () -> Unit) {
         viewModelScope.launch {
             authRepository.logout()
+            resetState()
+            onComplete()
         }
     }
 
