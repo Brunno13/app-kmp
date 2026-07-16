@@ -42,7 +42,7 @@
     <string name="msg_already_have_account">Already have an account?</string>
 
     <!-- Home & Profile -->
-    <string name="welcome_user">Welcome, Brunno Santos da Silva!</string>
+    <string name="welcome_user">Welcome, %1$s!</string>
     <string name="btn_test_toast">Test Success Toast</string>
     <string name="btn_test_modal">Test Alert Modal</string>
     <string name="btn_simulate_crash">Simulate App Crash</string>
@@ -101,4 +101,18 @@
     <string name="msg_invalid_current_password">The current password is incorrect or session expired.</string>
     <string name="error_invalid_password">The current password is incorrect.</string>
     <string name="error_password_too_short">The new password must be at least 8 characters long.</string>
+
+    <!-- Alerts -->
+    <string name="action_ok">OK</string>
+    <string name="action_try_again">Try Again</string>
+    <string name="error_unexpected_title">Oops! Something went wrong.</string>
+    <string name="error_unexpected_message">An unexpected error occurred in the application. Our engineering team has been notified.</string>
+    <string name="network_offline_banner">NO CONNECTION</string>
+    <string name="toast_success_title">Success</string>
+    <string name="toast_success_profile_message">Profile updated successfully.</string>
+    <string name="modal_update_title">Update Available</string>
+    <string name="modal_update_message">A new version of the app is ready for download.</string>
+    <string name="modal_success_title">Success</string>
+    <string name="modal_success_profile_update">Your profile has been updated successfully.</string>
+    <string name="modal_error_title">Error</string>
 </resources>

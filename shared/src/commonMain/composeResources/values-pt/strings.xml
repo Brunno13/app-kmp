@@ -42,7 +42,7 @@
     <string name="msg_already_have_account">Já tem uma conta?</string>
 
     <!-- Home & Profile -->
-    <string name="welcome_user">Bem-vindo, Brunno Santos da Silva!</string>
+    <string name="welcome_user">Bem-vindo(a), %1$s!</string>
     <string name="btn_test_toast">Testar Toast de Sucesso</string>
     <string name="btn_test_modal">Testar Modal de Alerta</string>
     <string name="btn_simulate_crash">Simular Crash do App</string>
@@ -101,4 +101,18 @@
     <string name="msg_invalid_current_password">A senha atual está incorreta ou a sessão expirou.</string>
     <string name="error_invalid_password">A senha atual está incorreta.</string>
     <string name="error_password_too_short">A nova senha deve ter pelo menos 8 caracteres.</string>
+
+    <!-- Alerts -->
+    <string name="action_ok">OK</string>
+    <string name="action_try_again">Tentar Novamente</string>
+    <string name="error_unexpected_title">Ops! Algo deu errado.</string>
+    <string name="error_unexpected_message">Um erro inesperado ocorreu no aplicativo. Nossa equipe de engenharia foi notificada.</string>
+    <string name="network_offline_banner">SEM CONEXÃO</string>
+    <string name="toast_success_title">Sucesso</string>
+    <string name="toast_success_profile_message">Perfil atualizado com sucesso.</string>
+    <string name="modal_update_title">Atualização Disponível</string>
+    <string name="modal_update_message">Uma nova versão do aplicativo está pronta para download.</string>
+    <string name="modal_success_title">Sucesso</string>
+    <string name="modal_success_profile_update">Seus dados foram salvos com sucesso.</string>
+    <string name="modal_error_title">Erro</string>
 </resources>
