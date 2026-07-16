@@ -2,13 +2,15 @@ package com.brunno.appkmp.di
 
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.brunno.appkmp.data.local.AppDatabase
-import org.koin.android.ext.koin.androidContext
-import org.koin.dsl.module
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.brunno.appkmp.data.local.AppDatabase
+import com.brunno.appkmp.presentation.utils.AndroidNetworkMonitor
+import com.brunno.appkmp.presentation.utils.NetworkMonitor
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.SharedPreferencesSettings
+import org.koin.android.ext.koin.androidContext
+import org.koin.dsl.module
 
 actual val platformModule = module {
     single<RoomDatabase.Builder<AppDatabase>> {
@@ -37,5 +39,9 @@ actual val platformModule = module {
         )
 
         SharedPreferencesSettings(sharedPreferences)
+    }
+
+    single<NetworkMonitor> {
+        AndroidNetworkMonitor(context = androidContext())
     }
 }

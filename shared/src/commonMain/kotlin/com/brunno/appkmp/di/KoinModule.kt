@@ -5,12 +5,13 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.brunno.appkmp.data.local.AppDatabase
 import com.brunno.appkmp.data.repository.AuthRepositoryImpl
 import com.brunno.appkmp.domain.repository.AuthRepository
+import com.brunno.appkmp.presentation.utils.GlobalErrorHandler
 import com.brunno.appkmp.presentation.viewmodels.AuthViewModel
 import com.brunno.appkmp.presentation.viewmodels.ThemeViewModel
-import org.koin.core.module.dsl.viewModelOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import org.koin.core.context.startKoin
+import org.koin.core.module.dsl.viewModelOf
 import org.koin.core.qualifier.named
 import org.koin.dsl.KoinAppDeclaration
 import org.koin.dsl.module
@@ -35,6 +36,8 @@ val appModule = module {
             settings = get()
         )
     }
+
+    single { GlobalErrorHandler() }
 
     viewModelOf(::AuthViewModel)
     viewModelOf(::ThemeViewModel)
