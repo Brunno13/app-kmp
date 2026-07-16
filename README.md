@@ -8,6 +8,7 @@ A cross-platform mobile application (Android and iOS) built with **Kotlin Multip
 * **Offline Persistence:** Reactive local database using **Room Multiplatform** as the Single Source of Truth.
 * **Security:** Encrypted native storage for session tokens (`EncryptedSharedPreferences` / `Keychain`) using **Multiplatform Settings**.
 * **Global Localization & UI:** Native i18n support (English/Portuguese) using **Compose Resources**, zero "magic strings", and centralized navigation constants.
+* **UI Feedback & Network Monitoring:** Real-time native network tracking (`ConnectivityManager` on Android, `NWPathMonitor` on iOS) powering a reactive edge-to-edge offline banner, alongside a centralized alert system (Animated Toasts, Modals, and Full-screen Fatal Errors) using a global handler.
 * **Robust Error Handling:** Strongly typed, domain-driven error management (`AppResult`/`AppError`) mapping network and authentication failures directly to localized UI states.
 * **Automated Testing:** Unit tests for native business rules and E2E visual flow automation with `Maestro`.
 * **Infrastructure & CI/CD:** Isolated environments (Staging and Production) with automated cross-builds via Woodpecker CI.
@@ -35,8 +36,10 @@ A cross-platform mobile application (Android and iOS) built with **Kotlin Multip
 - [x] **Design System:** Creation of reusable visual components using Compose, including global theming (Colors, Shapes, Dimens) and shared widgets (`AppButton`, `AppTextField`, `MenuCard`).
 - [x] **User Preferences & Theming:** Global dynamic theme engine (Light/Dark/Auto) linked to multiplatform `Settings` and State hoisting at the app root level.
 - [x] **CI/CD Automation:** Woodpecker CI pipelines (`release` and `test`) running via local macOS agent, powered by Bash scripts mapping Gradle tasks for APK generation and Kotlin Native iOS compilation.
+- [x] **UI Feedback & Network Monitoring:** Implementation of a centralized, theme-aware alert system (Animated Toasts, Full-screen Errors, and Modals) and real-time native network state monitoring (Android `ConnectivityManager` & iOS `NWPathMonitor`) driving an edge-to-edge offline banner.
 
 ### ⏳ Next Steps
+- [ ] **Unit Testing:** Implement comprehensive unit tests for ViewModels, Domain Use Cases, and Repositories.
 - [ ] **Native Integration:** Biometrics implementation via `expect/actual` (Face ID / Touch ID).
 - [ ] **E2E Testing:** Creation of interactive test flows using Maestro scripts.
 
