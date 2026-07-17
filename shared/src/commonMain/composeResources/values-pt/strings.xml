@@ -6,6 +6,12 @@
     <string name="btn_ok">OK</string>
     <string name="desc_show_password">Mostrar senha</string>
     <string name="desc_hide_password">Ocultar senha</string>
+    <string name="desc_edit_profile_photo">Editar foto de perfil</string>
+    <string name="title_change_profile_picture">Alterar foto de perfil</string>
+    <string name="action_take_photo">Tirar uma foto</string>
+    <string name="desc_camera">Câmera</string>
+    <string name="action_choose_from_gallery">Escolher da galeria</string>
+    <string name="desc_gallery">Galeria</string>
 
     <!-- Errors -->
     <string name="error_invalid_credentials">E-mail ou senha incorretos.</string>

@@ -6,6 +6,12 @@
     <string name="btn_ok">OK</string>
     <string name="desc_show_password">Show password</string>
     <string name="desc_hide_password">Hide password</string>
+    <string name="desc_edit_profile_photo">Edit Profile Photo</string>
+    <string name="title_change_profile_picture">Change Profile Picture</string>
+    <string name="action_take_photo">Take a photo</string>
+    <string name="desc_camera">Camera</string>
+    <string name="action_choose_from_gallery">Choose from gallery</string>
+    <string name="desc_gallery">Gallery</string>
 
     <!-- Errors -->
     <string name="error_invalid_credentials">Invalid email or password.</string>

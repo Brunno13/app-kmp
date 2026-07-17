@@ -99,7 +99,7 @@ fun EditProfileScreen(
                     if (bitmapToDisplay != null) {
                         Image(
                             bitmap = bitmapToDisplay,
-                            contentDescription = "Edit Profile Photo",
+                            contentDescription = stringResource(Res.string.desc_edit_profile_photo),
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
@@ -210,15 +210,15 @@ fun EditProfileScreen(
                         .padding(horizontal = 24.dp, vertical = 16.dp)
                 ) {
                     Text(
-                        text = "Change Profile Picture",
+                        text = stringResource(Res.string.title_change_profile_picture),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
 
                     ListItem(
-                        headlineContent = { Text("Take a photo") },
-                        leadingContent = { Icon(Icons.Default.CameraAlt, contentDescription = "Camera") },
+                        headlineContent = { Text(stringResource(Res.string.action_take_photo)) },
+                        leadingContent = { Icon(Icons.Default.CameraAlt, contentDescription = stringResource(Res.string.desc_camera)) },
                         modifier = Modifier.clickable {
                             showImageSourceSheet = false
                             cameraPicker.launch()
@@ -227,8 +227,8 @@ fun EditProfileScreen(
                     )
 
                     ListItem(
-                        headlineContent = { Text("Choose from gallery") },
-                        leadingContent = { Icon(Icons.Default.PhotoLibrary, contentDescription = "Gallery") },
+                        headlineContent = { Text(stringResource(Res.string.action_choose_from_gallery)) },
+                        leadingContent = { Icon(Icons.Default.PhotoLibrary, contentDescription = stringResource(Res.string.desc_gallery)) },
                         modifier = Modifier.clickable {
                             showImageSourceSheet = false
                             singleImagePicker.launch()
