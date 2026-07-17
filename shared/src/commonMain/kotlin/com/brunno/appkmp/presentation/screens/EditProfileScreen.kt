@@ -35,6 +35,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
+import kotlin.random.Random
 
 @OptIn(ExperimentalEncodingApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -50,13 +51,14 @@ fun EditProfileScreen(
     var selectedFileName by remember { mutableStateOf<String?>(null) }
     var selectedMimeType by remember { mutableStateOf<String?>(null) }
     var showImageSourceSheet by remember { mutableStateOf(false) }
+
     val singleImagePicker = rememberImagePickerLauncher(
         selectionMode = SelectionMode.Single,
         scope = scope,
         onResult = { byteArrays ->
             byteArrays.firstOrNull()?.let { bytes ->
                 selectedBase64 = Base64.encode(bytes)
-                selectedFileName = "profile_gallery_${System.currentTimeMillis()}.jpg"
+                selectedFileName = "profile_gallery_${Random.nextInt(10000, 99999)}.jpg"
                 selectedMimeType = "image/jpeg"
             }
         }
@@ -65,7 +67,7 @@ fun EditProfileScreen(
     val cameraPicker = rememberCameraLauncher { bytes ->
         if (bytes != null) {
             selectedBase64 = Base64.encode(bytes)
-            selectedFileName = "profile_camera_${System.currentTimeMillis()}.jpg"
+            selectedFileName = "profile_camera_${Random.nextInt(10000, 99999)}.jpg"
             selectedMimeType = "image/jpeg"
         }
     }

@@ -3,8 +3,8 @@ package com.brunno.appkmp.presentation.utils
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.refTo
-import platform.Foundation.UIApplication
+import kotlinx.cinterop.readBytes
+import platform.UIKit.UIApplication
 import platform.UIKit.UIImage
 import platform.UIKit.UIImageJPEGRepresentation
 import platform.UIKit.UIImagePickerController
@@ -23,13 +23,8 @@ actual fun rememberCameraLauncher(onResult: (ByteArray?) -> Unit): CameraLaunche
                 val image = didFinishPickingMediaWithInfo[UIImagePickerControllerOriginalImage] as? UIImage
                 if (image != null) {
                     val jpegData = UIImageJPEGRepresentation(image, 0.8)
-                    if (jpegData != null) {
-                        val byteArray = ByteArray(jpegData.length.toInt())
-                        jpegData.getBytes(byteArray.refTo(0), jpegData.length)
-                        onResult(byteArray)
-                    } else {
-                        onResult(null)
-                    }
+                    val bytes = jpegData?.bytes?.readBytes(jpegData.length.toInt())
+                    onResult(bytes)
                 } else {
                     onResult(null)
                 }
