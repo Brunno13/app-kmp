@@ -18,4 +18,6 @@ interface AuthRepository {
     suspend fun updateUser(name: String): AppResult<Unit, AppError>
     suspend fun revokeSession(token: String): AppResult<Unit, AppError>
     suspend fun logout()
+    suspend fun updateAvatar(base64: String, fileName: String, mimeType: String): AppResult<Unit, AppError>
+    suspend fun syncAvatar(filename: String)
 }

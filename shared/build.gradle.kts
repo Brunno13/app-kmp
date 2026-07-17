@@ -77,6 +77,8 @@ kotlin {
             implementation(libs.multiplatformSettings)
 
             implementation(compose.materialIconsExtended)
+
+            implementation(libs.peekaboo.image.picker)
         }
 
         iosMain.dependencies {

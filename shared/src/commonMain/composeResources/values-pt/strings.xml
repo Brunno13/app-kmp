@@ -4,6 +4,8 @@
     <string name="app_name">Meu App</string>
     <string name="btn_login">Entrar</string>
     <string name="btn_ok">OK</string>
+    <string name="desc_show_password">Mostrar senha</string>
+    <string name="desc_hide_password">Ocultar senha</string>
 
     <!-- Errors -->
     <string name="error_invalid_credentials">E-mail ou senha incorretos.</string>

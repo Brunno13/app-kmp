@@ -103,6 +103,23 @@ class AuthViewModel(
         }
     }
 
+    fun updateAvatar(base64: String, fileName: String, mimeType: String) {
+        viewModelScope.launch {
+            _uiState.value = LoginUiState.Loading
+            when (val result = authRepository.updateAvatar(base64, fileName, mimeType)) {
+                is AppResult.Success -> _uiState.value = LoginUiState.Success
+                is AppResult.Error -> _uiState.value = LoginUiState.Error(result.error)
+            }
+        }
+    }
+
+    fun syncAvatarIfNeeded(filename: String?) {
+        if (filename.isNullOrBlank()) return
+        viewModelScope.launch {
+            authRepository.syncAvatar(filename)
+        }
+    }
+
     fun changePassword(current: String, new: String) {
         viewModelScope.launch {
             _uiState.value = LoginUiState.Loading

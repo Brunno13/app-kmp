@@ -99,3 +99,17 @@ data class RevokeSessionRequest(
 data class RevokeSessionResponse(
     val status: Boolean? = null
 )
+
+@Serializable
+data class AvatarUpdateRequest(
+    val avatarBase64: String,
+    val fileName: String,
+    val mimeType: String
+)
+
+@Serializable
+data class AvatarUploadResponse(
+    val success: Boolean,
+    val message: String? = null,
+    val url: String
+)

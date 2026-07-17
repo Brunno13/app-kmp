@@ -16,6 +16,8 @@ import com.russhwolf.settings.Settings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 class AuthRepositoryImpl(
     private val api: AuthApi,
@@ -135,6 +137,49 @@ class AuthRepositoryImpl(
         }
     }
 
+    @OptIn(ExperimentalEncodingApi::class)
+    override suspend fun updateAvatar(base64: String, fileName: String, mimeType: String): AppResult<Unit, AppError> {
+        return try {
+            val uploadResponse = api.uploadAvatar(AvatarUpdateRequest(base64, fileName, mimeType))
+
+            api.updateUser(UpdateUserRequest(image = uploadResponse.url))
+
+            val safeFilename = uploadResponse.url.substringAfterLast("/")
+
+            val currentUser = dao.getAllUsers().firstOrNull()?.firstOrNull()
+            if (currentUser != null) {
+                dao.insertUser(currentUser.copy(
+                    avatarData = base64,
+                    avatarFilename = safeFilename
+                ))
+            }
+            AppResult.Success(Unit)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            AppResult.Error(parseNetworkError(e))
+        }
+    }
+
+    @OptIn(ExperimentalEncodingApi::class)
+    override suspend fun syncAvatar(filename: String) {
+        try {
+            val safeFilename = filename.substringAfterLast("/")
+
+            val bytes = api.getAvatar(safeFilename)
+            val remoteBase64 = Base64.encode(bytes)
+
+            val currentUser = dao.getAllUsers().firstOrNull()?.firstOrNull()
+            if (currentUser != null && currentUser.avatarData != remoteBase64) {
+                dao.insertUser(currentUser.copy(
+                    avatarData = remoteBase64,
+                    avatarFilename = safeFilename
+                ))
+            }
+        } catch (e: Exception) {
+            println("Erro no syncAvatar: ${e.message}")
+        }
+    }
+
     private suspend fun saveSession(response: LoginResponse) {
         val actualToken = response.token
 
@@ -143,10 +188,13 @@ class AuthRepositoryImpl(
         }
 
         settings.putString(PREF_AUTH_TOKEN, actualToken)
+        dao.clearSession()
 
         val user = UserEntity(
             name = response.user.name ?: "",
-            email = response.user.email ?: ""
+            email = response.user.email ?: "",
+            avatarFilename = response.user.image?.substringAfterLast("/"),
+            avatarData = null
         )
 
         dao.insertUser(user)

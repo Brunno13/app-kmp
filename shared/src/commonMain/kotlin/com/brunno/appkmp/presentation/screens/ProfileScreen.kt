@@ -1,6 +1,7 @@
 package com.brunno.appkmp.presentation.screens
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -16,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -25,6 +27,7 @@ import com.brunno.appkmp.presentation.components.AppBottomBar
 import com.brunno.appkmp.presentation.components.AppButton
 import com.brunno.appkmp.presentation.components.MenuCard
 import com.brunno.appkmp.presentation.navigation.Routes
+import com.brunno.appkmp.presentation.utils.decodeBase64ToImageBitmap
 import com.brunno.appkmp.presentation.viewmodels.AuthViewModel
 import com.brunno.appkmp.presentation.viewmodels.ThemeViewModel
 import kmpprojectbrunno.shared.generated.resources.*
@@ -44,6 +47,14 @@ fun ProfileScreen(
     val currentUser by authViewModel.currentUser.collectAsState()
     val themeMode by themeViewModel.themeMode.collectAsState()
     var offlineMode by remember { mutableStateOf(false) }
+
+    LaunchedEffect(currentUser?.avatarFilename) {
+        authViewModel.syncAvatarIfNeeded(currentUser?.avatarFilename)
+    }
+
+    val avatarBitmap = remember(currentUser?.avatarData) {
+        currentUser?.avatarData?.let { decodeBase64ToImageBitmap(it) }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -68,7 +79,28 @@ fun ProfileScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(modifier = Modifier.height(40.dp))
-                Box(modifier = Modifier.size(120.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant))
+                Box(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (avatarBitmap != null) {
+                        Image(
+                            bitmap = avatarBitmap,
+                            contentDescription = "Profile Photo",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Text(
+                            text = currentUser?.name?.take(1)?.uppercase() ?: "",
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(

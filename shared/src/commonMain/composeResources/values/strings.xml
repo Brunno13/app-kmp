@@ -4,6 +4,8 @@
     <string name="app_name">My App</string>
     <string name="btn_login">Sign In</string>
     <string name="btn_ok">OK</string>
+    <string name="desc_show_password">Show password</string>
+    <string name="desc_hide_password">Hide password</string>
 
     <!-- Errors -->
     <string name="error_invalid_credentials">Invalid email or password.</string>

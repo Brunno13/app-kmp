@@ -4,6 +4,7 @@ import com.brunno.appkmp.data.remote.models.*
 import de.jensklingenberg.ktorfit.http.Body
 import de.jensklingenberg.ktorfit.http.GET
 import de.jensklingenberg.ktorfit.http.POST
+import de.jensklingenberg.ktorfit.http.Path
 
 interface AuthApi {
 
@@ -30,4 +31,10 @@ interface AuthApi {
 
     @POST("api/auth/sign-out")
     suspend fun logout()
+
+    @POST("api/avatar")
+    suspend fun uploadAvatar(@Body request: AvatarUpdateRequest): AvatarUploadResponse
+
+    @GET("api/avatar/{filename}")
+    suspend fun getAvatar(@Path("filename") filename: String): ByteArray
 }

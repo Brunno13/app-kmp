@@ -1,14 +1,20 @@
 package com.brunno.appkmp.presentation.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -18,12 +24,19 @@ import com.brunno.appkmp.presentation.components.AppTextField
 import com.brunno.appkmp.presentation.components.AppTopBar
 import com.brunno.appkmp.presentation.theme.dimens
 import com.brunno.appkmp.presentation.utils.asString
+import com.brunno.appkmp.presentation.utils.decodeBase64ToImageBitmap
+import com.brunno.appkmp.presentation.utils.rememberCameraLauncher
 import com.brunno.appkmp.presentation.viewmodels.AuthViewModel
 import com.brunno.appkmp.presentation.viewmodels.LoginUiState
+import com.preat.peekaboo.image.picker.SelectionMode
+import com.preat.peekaboo.image.picker.rememberImagePickerLauncher
 import kmpprojectbrunno.shared.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
+@OptIn(ExperimentalEncodingApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
     onBack: () -> Unit,
@@ -31,8 +44,36 @@ fun EditProfileScreen(
 ) {
     val currentUser by viewModel.currentUser.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
-
+    val scope = rememberCoroutineScope()
     var name by remember(currentUser) { mutableStateOf(currentUser?.name ?: "") }
+    var selectedBase64 by remember { mutableStateOf<String?>(null) }
+    var selectedFileName by remember { mutableStateOf<String?>(null) }
+    var selectedMimeType by remember { mutableStateOf<String?>(null) }
+    var showImageSourceSheet by remember { mutableStateOf(false) }
+    val singleImagePicker = rememberImagePickerLauncher(
+        selectionMode = SelectionMode.Single,
+        scope = scope,
+        onResult = { byteArrays ->
+            byteArrays.firstOrNull()?.let { bytes ->
+                selectedBase64 = Base64.encode(bytes)
+                selectedFileName = "profile_gallery_${System.currentTimeMillis()}.jpg"
+                selectedMimeType = "image/jpeg"
+            }
+        }
+    )
+
+    val cameraPicker = rememberCameraLauncher { bytes ->
+        if (bytes != null) {
+            selectedBase64 = Base64.encode(bytes)
+            selectedFileName = "profile_camera_${System.currentTimeMillis()}.jpg"
+            selectedMimeType = "image/jpeg"
+        }
+    }
+
+    val bitmapToDisplay = remember(selectedBase64, currentUser?.avatarData) {
+        val base64ToUse = selectedBase64 ?: currentUser?.avatarData
+        base64ToUse?.let { decodeBase64ToImageBitmap(it) }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -52,11 +93,27 @@ fun EditProfileScreen(
                     modifier = Modifier
                         .size(120.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                )
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (bitmapToDisplay != null) {
+                        Image(
+                            bitmap = bitmapToDisplay,
+                            contentDescription = "Edit Profile Photo",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Text(
+                            text = currentUser?.name?.take(1)?.uppercase() ?: "",
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
 
                 Button(
-                    onClick = { /* TODO */ },
+                    onClick = { showImageSourceSheet = true },
                     modifier = Modifier.offset(y = 12.dp).height(32.dp),
                     shape = RoundedCornerShape(50),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
@@ -90,15 +147,25 @@ fun EditProfileScreen(
             Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceLarge))
 
             Button(
-                onClick = { viewModel.updateUser(name) },
-                enabled = name.isNotBlank() && name != currentUser?.name && uiState !is LoginUiState.Loading,
+                onClick = {
+                    if (selectedBase64 != null && selectedFileName != null && selectedMimeType != null) {
+                        viewModel.updateAvatar(selectedBase64!!, selectedFileName!!, selectedMimeType!!)
+                        if (name.isNotBlank() && name != currentUser?.name) {
+                            viewModel.updateUser(name)
+                        }
+                    } else if (name.isNotBlank() && name != currentUser?.name) {
+                        viewModel.updateUser(name)
+                    }
+                },
+                enabled = ((name.isNotBlank() && name != currentUser?.name) || selectedBase64 != null) && uiState !is LoginUiState.Loading,
                 modifier = Modifier.fillMaxWidth().height(MaterialTheme.dimens.buttonHeight),
                 shape = MaterialTheme.shapes.medium
             ) {
                 if (uiState is LoginUiState.Loading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(MaterialTheme.dimens.spaceLarge),
-                        color = MaterialTheme.colorScheme.onPrimary
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp
                     )
                 } else {
                     Text(text = stringResource(Res.string.action_save_changes), fontWeight = FontWeight.Bold)
@@ -106,6 +173,7 @@ fun EditProfileScreen(
             }
         }
 
+        // Modais de Resultado
         when (val state = uiState) {
             is LoginUiState.Success -> {
                 AppModal(
@@ -128,8 +196,48 @@ fun EditProfileScreen(
                     }
                 )
             }
-            else -> {
-                // Idle ou Loading não exigem modais
+            else -> {}
+        }
+
+        if (showImageSourceSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showImageSourceSheet = false },
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                ) {
+                    Text(
+                        text = "Change Profile Picture",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    ListItem(
+                        headlineContent = { Text("Take a photo") },
+                        leadingContent = { Icon(Icons.Default.CameraAlt, contentDescription = "Camera") },
+                        modifier = Modifier.clickable {
+                            showImageSourceSheet = false
+                            cameraPicker.launch()
+                        },
+                        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+                    )
+
+                    ListItem(
+                        headlineContent = { Text("Choose from gallery") },
+                        leadingContent = { Icon(Icons.Default.PhotoLibrary, contentDescription = "Gallery") },
+                        modifier = Modifier.clickable {
+                            showImageSourceSheet = false
+                            singleImagePicker.launch()
+                        },
+                        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+                    )
+
+                    Spacer(modifier = Modifier.height(32.dp))
+                }
             }
         }
     }

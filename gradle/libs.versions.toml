@@ -25,6 +25,8 @@ sqlite = "2.5.0-alpha11"
 multiplatformSettings = "1.1.1"
 securityCrypto = "1.1.0-alpha06"
 
+peekaboo = "0.5.2"
+
 [libraries]
 # --- AndroidX Core ---
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidx-core" }
@@ -68,6 +70,10 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 
 multiplatformSettings = { module = "com.russhwolf:multiplatform-settings", version.ref = "multiplatformSettings" }
 androidxSecurityCrypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
+
+peekaboo-image-picker = { module = "io.github.onseok:peekaboo-image-picker", version.ref = "peekaboo" }
+
+
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
