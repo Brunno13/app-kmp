@@ -37,10 +37,10 @@ A cross-platform mobile application (Android and iOS) built with **Kotlin Multip
 - [x] **User Preferences & Theming:** Global dynamic theme engine (Light/Dark/Auto) linked to multiplatform `Settings` and State hoisting at the app root level.
 - [x] **CI/CD Automation:** Woodpecker CI pipelines (`release` and `test`) running via local macOS agent, powered by Bash scripts mapping Gradle tasks for APK generation and Kotlin Native iOS compilation.
 - [x] **UI Feedback & Network Monitoring:** Implementation of a centralized, theme-aware alert system (Animated Toasts, Full-screen Errors, and Modals) and real-time native network state monitoring (Android `ConnectivityManager` & iOS `NWPathMonitor`) driving an edge-to-edge offline banner.
+- [x] **Native Integration:** Biometrics implementation via `expect/actual` (Face ID / Touch ID) linked with secure storage constraints.
 
 ### ⏳ Next Steps
 - [ ] **Unit Testing:** Implement comprehensive unit tests for ViewModels, Domain Use Cases, and Repositories.
-- [ ] **Native Integration:** Biometrics implementation via `expect/actual` (Face ID / Touch ID).
 - [ ] **E2E Testing:** Creation of interactive test flows using Maestro scripts.
 
 ---
