@@ -28,9 +28,18 @@ class AuthRepositoryImpl(
 
     companion object {
         private const val PREF_AUTH_TOKEN = "auth_token"
+        private const val PREF_BIOMETRIC_ENABLED = "biometric_enabled"
     }
 
     private class InvalidSessionException : Exception()
+
+    fun isBiometricEnabled(): Boolean {
+        return settings.getBoolean(PREF_BIOMETRIC_ENABLED, false)
+    }
+
+    fun setBiometricEnabled(enabled: Boolean) {
+        settings.putBoolean(PREF_BIOMETRIC_ENABLED, enabled)
+    }
 
     override fun observeCurrentUser(): Flow<UserEntity?> {
         return dao.getAllUsers().map { users -> users.firstOrNull() }
@@ -75,7 +84,7 @@ class AuthRepositoryImpl(
         } finally {
             dao.clearSession()
             sessionDao.clearAll()
-            settings.remove(PREF_AUTH_TOKEN)
+            settings.clear()
         }
     }
 

@@ -19,6 +19,7 @@ import com.brunno.appkmp.presentation.components.AppTopBar
 import com.brunno.appkmp.presentation.components.MenuCard
 import com.brunno.appkmp.presentation.theme.dimens
 import com.brunno.appkmp.presentation.utils.asString
+import com.brunno.appkmp.presentation.utils.rememberBiometricManager
 import com.brunno.appkmp.presentation.viewmodels.AuthViewModel
 import com.brunno.appkmp.presentation.viewmodels.LoginUiState
 import kmpprojectbrunno.shared.generated.resources.*
@@ -34,11 +35,15 @@ fun SecurityScreen(
 ) {
     var currentPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
-    var biometricEnabled by remember { mutableStateOf(false) }
     var showSuccessMessage by remember { mutableStateOf(false) }
-
     val uiState by viewModel.uiState.collectAsState()
     val activeSessions by viewModel.activeSessions.collectAsState()
+    val biometricManager = rememberBiometricManager()
+    val isBiometricAvailable = remember { biometricManager.isBiometricAvailable() }
+    val biometricEnabled by viewModel.isBiometricEnabled.collectAsState()
+    val titleConfirm = stringResource(Res.string.title_confirm_action)
+    val subtitleEnable = stringResource(Res.string.subtitle_enable_biometric)
+    val subtitleDisable = stringResource(Res.string.subtitle_disable_biometric)
 
     LaunchedEffect(Unit) {
         viewModel.loadSessions()
@@ -132,28 +137,46 @@ fun SecurityScreen(
 
             Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceExtraLarge))
 
-            Text(
-                text = stringResource(Res.string.title_biometric),
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
+            if (isBiometricAvailable) {
+                Text(
+                    text = stringResource(Res.string.title_biometric),
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
 
-            MenuCard(
-                title = stringResource(Res.string.title_biometric_unlock),
-                subtitle = stringResource(Res.string.desc_biometric_unlock),
-                icon = Icons.Default.Lock,
-                trailingContent = { Switch(checked = biometricEnabled, onCheckedChange = { biometricEnabled = it }) }
-            )
+                MenuCard(
+                    title = stringResource(Res.string.title_biometric_unlock),
+                    subtitle = stringResource(Res.string.desc_biometric_unlock),
+                    icon = Icons.Default.Lock,
+                    trailingContent = {
+                        Switch(
+                            checked = biometricEnabled,
+                            onCheckedChange = { desiredState ->
+                                biometricManager.promptBiometricAuth(
+                                    title = titleConfirm,
+                                    subtitle = if (desiredState) subtitleEnable else subtitleDisable,
+                                    onSuccess = {
+                                        viewModel.toggleBiometric(desiredState)
+                                    },
+                                    onFailed = {
+                                        // O estado permanece o mesmo e o Switch volta à posição anterior
+                                    }
+                                )
+                            }
+                        )
+                    }
+                )
 
-            Text(
-                text = stringResource(Res.string.warning_biometric),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(top = MaterialTheme.dimens.spaceSmall, start = MaterialTheme.dimens.spaceSmall)
-            )
+                Text(
+                    text = stringResource(Res.string.warning_biometric),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = MaterialTheme.dimens.spaceSmall, start = MaterialTheme.dimens.spaceSmall)
+                )
 
-            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceExtraLarge))
+                Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceExtraLarge))
+            }
 
             Text(
                 text = stringResource(Res.string.title_active_sessions),

@@ -7,11 +7,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import com.brunno.appkmp.presentation.components.AppTextField
 import com.brunno.appkmp.presentation.theme.dimens
 import com.brunno.appkmp.presentation.utils.asString
+import com.brunno.appkmp.presentation.utils.rememberBiometricManager
 import com.brunno.appkmp.presentation.viewmodels.AuthViewModel
+import com.brunno.appkmp.presentation.viewmodels.AutoLoginState
 import com.brunno.appkmp.presentation.viewmodels.LoginUiState
 import kmpprojectbrunno.shared.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -26,11 +29,38 @@ fun LoginScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val currentUser by viewModel.currentUser.collectAsState()
+    val autoLoginState by viewModel.autoLoginState.collectAsState()
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    val biometricManager = rememberBiometricManager()
+    val titleSecureAccess = stringResource(Res.string.title_secure_access)
+    val subtitleSecureAccess = stringResource(Res.string.subtitle_secure_access)
 
     LaunchedEffect(currentUser) {
-        if (currentUser != null) onLoginSuccess()
+        if (currentUser != null && autoLoginState == AutoLoginState.Idle) {
+            viewModel.checkAutoLogin(biometricManager.isBiometricAvailable())
+        }
+    }
+
+    LaunchedEffect(autoLoginState) {
+        when (autoLoginState) {
+            is AutoLoginState.ProceedToHome -> {
+                viewModel.resetAutoLoginState()
+                onLoginSuccess()
+            }
+            is AutoLoginState.RequestBiometrics -> {
+                biometricManager.promptBiometricAuth(
+                    title = titleSecureAccess,
+                    subtitle = subtitleSecureAccess,
+                    onSuccess = { viewModel.onBiometricSuccess() },
+                    onFailed = { /* Permanece na tela de login para tentar novamente ou digitar senha */ }
+                )
+            }
+            is AutoLoginState.BiometricsRevoked -> {
+                // A ViewModel já deslogou o utilizador. Aqui a tela só aguarda.
+            }
+            is AutoLoginState.Idle -> {}
+        }
     }
 
     Scaffold(
@@ -94,6 +124,27 @@ fun LoginScreen(
                         fontSize = 16.sp
                     )
                 }
+            }
+
+            if (autoLoginState == AutoLoginState.RequestBiometrics) {
+                Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
+                TextButton(onClick = { viewModel.checkAutoLogin(biometricManager.isBiometricAvailable()) }) {
+                    Text(
+                        text = stringResource(Res.string.action_retry_biometrics),
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            if (autoLoginState == AutoLoginState.BiometricsRevoked) {
+                Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
+                Text(
+                    text = stringResource(Res.string.msg_biometrics_revoked),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center
+                )
             }
 
             if (uiState is LoginUiState.Error) {

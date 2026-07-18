@@ -83,6 +83,13 @@
     <string name="warning_biometric"> * Your device does not have biometric hardware or it is not configured.</string>
     <string name="title_active_sessions">Active Sessions</string>
     <string name="desc_active_sessions">Manage devices connected to your account.</string>
+    <string name="title_secure_access">Secure Access</string>
+    <string name="subtitle_secure_access">Authenticate to access your account</string>
+    <string name="action_retry_biometrics">Try biometrics again</string>
+    <string name="msg_biometrics_revoked">The device\'s biometric settings have changed. For your security, please log in again.</string>
+    <string name="title_confirm_action">Confirm Action</string>
+    <string name="subtitle_enable_biometric">Authenticate to enable biometrics</string>
+    <string name="subtitle_disable_biometric">Authenticate to disable biometrics</string>
 
     <!-- Mocks & Accessibility -->
     <string name="mock_user_name">Brunno Santos da Silva</string>

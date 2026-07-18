@@ -41,6 +41,7 @@ kotlin {
             implementation(libs.ktor.client.okhttp)
 
             implementation(libs.androidxSecurityCrypto)
+            implementation(libs.androidx.biometric)
         }
 
         commonMain.dependencies {
