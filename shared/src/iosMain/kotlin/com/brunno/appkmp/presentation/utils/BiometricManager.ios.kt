@@ -2,11 +2,13 @@ package com.brunno.appkmp.presentation.utils
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import kotlinx.cinterop.ExperimentalForeignApi
 import platform.LocalAuthentication.*
 import platform.Foundation.*
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
 
+@OptIn(ExperimentalForeignApi::class)
 actual class BiometricManager {
     actual fun isBiometricAvailable(): Boolean {
         val context = LAContext()
