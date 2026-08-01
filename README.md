@@ -254,5 +254,5 @@ The Woodpecker CI pipeline (`.woodpecker/release.yml`) automates APK/Framework g
 
 * **In Staging (`.staging` flavor):** The app allows cleartext HTTP traffic to enable communication with local development servers and staging APIs without SSL certificates.
 * **In Production:** Builds enforce secure HTTPS connections for all remote communications.
-
+ 
 ---
