@@ -21,7 +21,7 @@ steps:
           --max-time 10 \
           --output /dev/null \
           -X POST \
-          "https://gotify.brunnoserver.duckdns.org/message?token=$GOTIFY_TOKEN" \
+          "https://gotify.brunnoserver.duckdns.org/message?token=$$GOTIFY_TOKEN" \
           -F "title=WoodpeckerCI" \
           -F "message=WoodpeckerCI · App-KMP · Production pipeline started · Tag ${CI_COMMIT_TAG} · $${TIMESTAMP}" \
           -F "priority=5" \
@@ -200,7 +200,7 @@ steps:
           --max-time 10 \
           --output /dev/null \
           -X POST \
-          "https://gotify.brunnoserver.duckdns.org/message?token=$GOTIFY_TOKEN" \
+          "https://gotify.brunnoserver.duckdns.org/message?token=$$GOTIFY_TOKEN" \
           -F "title=WoodpeckerCI" \
           -F "message=WoodpeckerCI · App-KMP · Production pipeline finished successfully · Tag ${CI_COMMIT_TAG} · $${TIMESTAMP}" \
           -F "priority=5" \
@@ -222,7 +222,7 @@ steps:
           --max-time 10 \
           --output /dev/null \
           -X POST \
-          "https://gotify.brunnoserver.duckdns.org/message?token=$GOTIFY_TOKEN" \
+          "https://gotify.brunnoserver.duckdns.org/message?token=$$GOTIFY_TOKEN" \
           -F "title=WoodpeckerCI" \
           -F "message=WoodpeckerCI · App-KMP · Production pipeline failed · Tag ${CI_COMMIT_TAG} · $${TIMESTAMP}" \
           -F "priority=8" \

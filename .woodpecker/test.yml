@@ -22,7 +22,7 @@ steps:
           --max-time 10 \
           --output /dev/null \
           -X POST \
-          "https://gotify.brunnoserver.duckdns.org/message?token=$GOTIFY_TOKEN" \
+          "https://gotify.brunnoserver.duckdns.org/message?token=$$GOTIFY_TOKEN" \
           -F "title=WoodpeckerCI" \
           -F "message=WoodpeckerCI · App-KMP · Staging pipeline started · $${TIMESTAMP}" \
           -F "priority=5" \
@@ -60,7 +60,7 @@ steps:
           --max-time 10 \
           --output /dev/null \
           -X POST \
-          "https://gotify.brunnoserver.duckdns.org/message?token=$GOTIFY_TOKEN" \
+          "https://gotify.brunnoserver.duckdns.org/message?token=$$GOTIFY_TOKEN" \
           -F "title=WoodpeckerCI" \
           -F "message=WoodpeckerCI · App-KMP · Staging pipeline finished successfully · $${TIMESTAMP}" \
           -F "priority=5" \
@@ -83,7 +83,7 @@ steps:
           --max-time 10 \
           --output /dev/null \
           -X POST \
-          "https://gotify.brunnoserver.duckdns.org/message?token=$GOTIFY_TOKEN" \
+          "https://gotify.brunnoserver.duckdns.org/message?token=$$GOTIFY_TOKEN" \
           -F "title=WoodpeckerCI" \
           -F "message=WoodpeckerCI · App-KMP · Staging pipeline failed · $${TIMESTAMP}" \
           -F "priority=8" \
