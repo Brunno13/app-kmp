@@ -97,6 +97,7 @@ kotlin {
 
         commonTest.dependencies {
             implementation(kotlin("test"))
+            implementation("com.russhwolf:multiplatform-settings-test:1.1.1")
         }
     }
 }
