@@ -1,0 +1,348 @@
+when:
+  - event: manual
+
+labels:
+  platform: linux/amd64
+  role: build-linux
+
+depends_on:
+  - security-wake-x86
+
+# =========================================================
+# O Gitleaks precisa do histórico + objetos completos.
+# O clone parcial padrão do Woodpecker não serve para isso.
+# =========================================================
+
+clone:
+  git:
+    image: woodpeckerci/plugin-git
+    settings:
+      partial: false
+      depth: 0
+      tags: true
+
+steps:
+  # =========================================================
+  # VALIDAR HISTÓRICO GIT COMPLETO
+  # =========================================================
+
+  - name: gitleaks-prepare-history
+    image: alpine:3.23
+
+    commands:
+      - |
+        set -eu
+
+        apk add --no-cache git >/dev/null
+
+        echo "===== GITLEAKS / HISTORICO GIT ====="
+
+        git config remote.origin.fetch \
+          "+refs/heads/*:refs/remotes/origin/*"
+
+        git fetch \
+          --all \
+          --tags \
+          --prune
+
+        SHALLOW="$(
+          git rev-parse --is-shallow-repository
+        )"
+
+        COMMITS_ALL="$(
+          git rev-list --all --count
+        )"
+
+        TAGS="$(
+          git tag | wc -l | tr -d ' '
+        )"
+
+        PROMISOR="$(
+          git config --get remote.origin.promisor \
+          || true
+        )"
+
+        PARTIAL_FILTER="$(
+          git config --get remote.origin.partialclonefilter \
+          || true
+        )"
+
+        echo "SHALLOW=$SHALLOW"
+        echo "COMMITS_ALL=$COMMITS_ALL"
+        echo "TAGS=$TAGS"
+        echo "PROMISOR=${PROMISOR:-false}"
+        echo "PARTIAL_FILTER=${PARTIAL_FILTER:-none}"
+
+        if [ "$SHALLOW" != "false" ]; then
+          echo "ERRO: o repositório ainda está shallow."
+          exit 1
+        fi
+
+        if [ "$PROMISOR" = "true" ]; then
+          echo "ERRO: o clone ainda está configurado como promisor/partial."
+          exit 1
+        fi
+
+        if [ -n "$PARTIAL_FILTER" ]; then
+          echo "ERRO: partialclonefilter ainda está configurado."
+          exit 1
+        fi
+
+        echo
+        echo "===== VERIFICANDO OBJETOS AUSENTES ====="
+
+        MISSING_OBJECTS="$(
+          git rev-list \
+            --objects \
+            --all \
+            --missing=print \
+          | grep '^?' \
+          || true
+        )"
+
+        if [ -n "$MISSING_OBJECTS" ]; then
+          echo "ERRO: existem objetos Git ausentes."
+          printf '%s\n' "$MISSING_OBJECTS"
+          exit 1
+        fi
+
+        echo "MISSING_OBJECTS=0"
+
+        echo
+        echo "===== GIT FSCK ====="
+
+        git fsck \
+          --full \
+          --no-dangling
+
+        echo
+        echo "===== PREFLIGHT GIT LOG ====="
+
+        # Executa exatamente a classe de operação que o Gitleaks
+        # precisa realizar. Qualquer objeto histórico ausente deve
+        # derrubar o workflow aqui, antes do scanner.
+        git log \
+          -p \
+          -U0 \
+          --full-history \
+          --all \
+          --diff-filter=tuxdb \
+          >/dev/null
+
+        echo "GIT_LOG_PREFLIGHT=PASS"
+
+        echo
+        echo "GITLEAKS_HISTORY_PREPARE=PASS"
+
+  # =========================================================
+  # SCAN COMPLETO DO HISTÓRICO
+  # =========================================================
+
+  - name: gitleaks-scan
+    image: ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:b109bc5f8f76a38196a3e413704fc5b9e3c32360bce4e4b603bd6f45b3721dbb
+
+    commands:
+      - |
+        set -eu
+
+        mkdir -p .security-results
+
+        echo "===== GITLEAKS VERSION ====="
+        gitleaks version
+
+        echo
+        echo "===== GITLEAKS HISTORICO ====="
+
+        set +e
+
+        gitleaks git \
+          --platform=gitea \
+          --redact=100 \
+          --no-banner \
+          --no-color \
+          --report-format=json \
+          --report-path=.security-results/gitleaks.json \
+          --exit-code=10 \
+          . \
+          >.security-results/gitleaks.stdout.log \
+          2>.security-results/gitleaks.stderr.log
+
+        GITLEAKS_RC="$?"
+
+        set -e
+
+        cat .security-results/gitleaks.stdout.log
+
+        if [ -s .security-results/gitleaks.stderr.log ]; then
+          cat .security-results/gitleaks.stderr.log >&2
+        fi
+
+        if grep -q 'ERR \[git\]' \
+          .security-results/gitleaks.stderr.log; then
+
+          echo "ERRO: Gitleaks reportou falha ao processar o Git."
+          exit 1
+        fi
+
+        case "$GITLEAKS_RC" in
+          0)
+            echo "Histórico sem novos findings."
+            ;;
+
+          10)
+            echo "Novos findings históricos detectados."
+            ;;
+
+          *)
+            echo "ERRO: Gitleaks terminou com código inesperado: $GITLEAKS_RC"
+            exit "$GITLEAKS_RC"
+            ;;
+        esac
+
+        if [ ! -f .security-results/gitleaks.json ]; then
+          printf '[]\n' > .security-results/gitleaks.json
+        fi
+
+        echo
+        echo "GITLEAKS_HISTORY_SCAN=PASS"
+
+  # =========================================================
+  # SCAN DO ESTADO ATUAL
+  # =========================================================
+
+  - name: gitleaks-current
+    image: ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:b109bc5f8f76a38196a3e413704fc5b9e3c32360bce4e4b603bd6f45b3721dbb
+
+    commands:
+      - |
+        set -eu
+
+        mkdir -p .security-results
+
+        echo "===== GITLEAKS CURRENT TREE ====="
+
+        set +e
+
+        gitleaks dir \
+          --redact=100 \
+          --no-banner \
+          --no-color \
+          --report-format=json \
+          --report-path=.security-results/gitleaks-current.json \
+          --exit-code=10 \
+          .
+
+        GITLEAKS_CURRENT_RC="$?"
+
+        set -e
+
+        case "$GITLEAKS_CURRENT_RC" in
+          0)
+            echo "Estado atual sem findings."
+            ;;
+
+          10)
+            echo "Novos findings encontrados no estado atual."
+            ;;
+
+          *)
+            echo "ERRO: Gitleaks current terminou com código inesperado: $GITLEAKS_CURRENT_RC"
+            exit "$GITLEAKS_CURRENT_RC"
+            ;;
+        esac
+
+        if [ ! -f .security-results/gitleaks-current.json ]; then
+          printf '[]\n' > .security-results/gitleaks-current.json
+        fi
+
+        echo
+        echo "GITLEAKS_CURRENT_SCAN=PASS"
+
+  # =========================================================
+  # RESUMO SEGURO
+  # Não imprime Secret nem Match.
+  # =========================================================
+
+  - name: gitleaks-summary
+    image: alpine:3.23
+
+    commands:
+      - |
+        set -eu
+
+        apk add --no-cache jq >/dev/null
+
+        HISTORY_REPORT=".security-results/gitleaks.json"
+        CURRENT_REPORT=".security-results/gitleaks-current.json"
+
+        test -f "$HISTORY_REPORT"
+        test -f "$CURRENT_REPORT"
+
+        echo "===== GITLEAKS RESUMO ====="
+
+        HISTORY_FINDINGS="$(
+          jq 'length' "$HISTORY_REPORT"
+        )"
+
+        CURRENT_FINDINGS="$(
+          jq 'length' "$CURRENT_REPORT"
+        )"
+
+        echo "HISTORY_NEW_FINDINGS=$HISTORY_FINDINGS"
+        echo "CURRENT_FINDINGS=$CURRENT_FINDINGS"
+
+        echo
+        echo "===== NOVOS FINDINGS HISTORICOS ====="
+
+        jq -r '
+          .[]
+          | "GITLEAKS rule=\(.RuleID // "-") file=\(.File // "-") line=\(.StartLine // "-") commit=\(.Commit // "-")"
+        ' "$HISTORY_REPORT"
+
+        echo
+        echo "===== FINDINGS ATUAIS ====="
+
+        jq -r '
+          .[]
+          | "GITLEAKS rule=\(.RuleID // "-") file=\(.File // "-") line=\(.StartLine // "-")"
+        ' "$CURRENT_REPORT"
+
+        echo
+        echo "GITLEAKS_SUMMARY=PASS"
+
+  - name: gitleaks-gate
+    image: alpine:3.23
+
+    commands:
+      - |
+        set -eu
+
+        apk add --no-cache jq >/dev/null
+
+        HISTORY_REPORT=".security-results/gitleaks.json"
+        CURRENT_REPORT=".security-results/gitleaks-current.json"
+
+        HISTORY_FINDINGS="$(
+          jq 'length' "$HISTORY_REPORT"
+        )"
+
+        CURRENT_FINDINGS="$(
+          jq 'length' "$CURRENT_REPORT"
+        )"
+
+        echo "===== GITLEAKS GATE ====="
+        echo "HISTORY_NEW_FINDINGS=$HISTORY_FINDINGS"
+        echo "CURRENT_FINDINGS=$CURRENT_FINDINGS"
+
+        if [ "$HISTORY_FINDINGS" -ne 0 ]; then
+          echo "❌ GATE FAIL: novos secrets foram encontrados no histórico."
+          exit 1
+        fi
+
+        if [ "$CURRENT_FINDINGS" -ne 0 ]; then
+          echo "❌ GATE FAIL: secrets existem no estado atual do repositório."
+          exit 1
+        fi
+
+        echo
+        echo "GITLEAKS_GATE=PASS"
