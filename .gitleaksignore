@@ -1,0 +1,10 @@
+# Historical findings reviewed on 2026-09-13.
+# Revoked Gotify token removed from the current tree.
+# Keep fingerprints granular; do not replace with broad rule/file allowlists.
+
+3eda1482e8a0458e7d58f61566bb466c6b2bcff7:.woodpecker/test.yml:generic-api-key:22
+3eda1482e8a0458e7d58f61566bb466c6b2bcff7:.woodpecker/test.yml:generic-api-key:57
+3eda1482e8a0458e7d58f61566bb466c6b2bcff7:.woodpecker/test.yml:generic-api-key:77
+3eda1482e8a0458e7d58f61566bb466c6b2bcff7:.woodpecker/release.yml:generic-api-key:21
+3eda1482e8a0458e7d58f61566bb466c6b2bcff7:.woodpecker/release.yml:generic-api-key:199
+3eda1482e8a0458e7d58f61566bb466c6b2bcff7:.woodpecker/release.yml:generic-api-key:218
