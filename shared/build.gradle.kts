@@ -29,6 +29,14 @@ kotlin {
         namespace = "com.brunno.appkmp.shared"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
+
+        withAndroidTestOnJvmBuilder {
+            compilationName = "hostTest"
+            defaultSourceSetName = "androidHostTest"
+            sourceSetTreeName = "test"
+        }.configure {
+            isIncludeAndroidResources = true
+        }
     }
 
     sourceSets {
