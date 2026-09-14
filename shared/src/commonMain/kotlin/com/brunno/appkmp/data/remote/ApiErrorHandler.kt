@@ -4,7 +4,7 @@ import com.brunno.appkmp.data.remote.models.ApiErrorResponse
 import com.brunno.appkmp.domain.error.AppError
 import com.brunno.appkmp.domain.error.AuthError
 import com.brunno.appkmp.domain.error.NetworkError
-import io.ktor.client.plugins.ClientRequestException
+import io.ktor.client.plugins.ResponseException
 import io.ktor.client.statement.bodyAsText
 import io.ktor.utils.io.errors.IOException
 import kotlinx.serialization.json.Json
@@ -18,18 +18,27 @@ suspend fun parseNetworkError(exception: Exception): AppError {
     return when (exception) {
         is IOException -> NetworkError.NO_INTERNET
 
-        is ClientRequestException -> {
+        is ResponseException -> {
             val status = exception.response.status.value
-            val errorBody = try { exception.response.bodyAsText() } catch (e: Exception) { "" }
+
+            val errorBody = try {
+                exception.response.bodyAsText()
+            } catch (e: Exception) {
+                ""
+            }
+
             val apiError = try {
                 if (errorBody.isNotBlank()) {
                     errorJsonParser.decodeFromString<ApiErrorResponse>(errorBody)
-                } else null
+                } else {
+                    null
+                }
             } catch (e: Exception) {
                 null
             }
 
-            val errorDetails = "${apiError?.message} ${apiError?.error} ${apiError?.code}".uppercase()
+            val errorDetails =
+                "${apiError?.message} ${apiError?.error} ${apiError?.code}".uppercase()
 
             when (status) {
                 400 -> {
