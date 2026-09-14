@@ -583,6 +583,65 @@ class AuthViewModelTest {
         )
     }
 
+    @Test
+    fun logoutClearsViewModelStateAndInvokesCallback() = runTest {
+        val repository = FakeAuthRepository(
+            loginResult = AppResult.Success(Unit)
+        )
+
+        val viewModel = AuthViewModel(repository)
+
+        // Coloca o ViewModel em um estado diferente do inicial.
+        viewModel.login(
+            email = "test@example.com",
+            password = "test-password"
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(
+            LoginUiState.Success,
+            viewModel.uiState.value
+        )
+
+        // Para o FakeAuthRepository o cast para AuthRepositoryImpl
+        // não acontece, mas o estado local do ViewModel ainda muda.
+        viewModel.toggleBiometric(true)
+
+        assertEquals(
+            true,
+            viewModel.isBiometricEnabled.value
+        )
+
+        var callbackCalls = 0
+
+        viewModel.logout {
+            callbackCalls++
+        }
+
+        advanceUntilIdle()
+
+        assertEquals(
+            1,
+            repository.logoutCalls
+        )
+
+        assertEquals(
+            LoginUiState.Idle,
+            viewModel.uiState.value
+        )
+
+        assertEquals(
+            false,
+            viewModel.isBiometricEnabled.value
+        )
+
+        assertEquals(
+            1,
+            callbackCalls
+        )
+    }
+
     private class FakeAuthRepository(
         var loginResult: AppResult<Unit, AppError> =
             AppResult.Success(Unit),
@@ -603,6 +662,9 @@ class AuthViewModelTest {
             AppResult.Success(Unit)
 
     ) : AuthRepository {
+
+        var logoutCalls: Int = 0
+            private set
 
         var changePasswordCalls: Int = 0
             private set
@@ -739,6 +801,7 @@ class AuthViewModelTest {
             AppResult.Success(Unit)
 
         override suspend fun logout() {
+            logoutCalls++
         }
 
         override suspend fun updateAvatar(
