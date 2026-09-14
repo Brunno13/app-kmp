@@ -33,11 +33,11 @@ class AuthRepositoryImpl(
 
     private class InvalidSessionException : Exception()
 
-    fun isBiometricEnabled(): Boolean {
+    override fun isBiometricEnabled(): Boolean {
         return settings.getBoolean(PREF_BIOMETRIC_ENABLED, false)
     }
 
-    fun setBiometricEnabled(enabled: Boolean) {
+    override fun setBiometricEnabled(enabled: Boolean) {
         settings.putBoolean(PREF_BIOMETRIC_ENABLED, enabled)
     }
 

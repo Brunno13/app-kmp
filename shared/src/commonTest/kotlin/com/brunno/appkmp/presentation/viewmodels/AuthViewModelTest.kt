@@ -1134,6 +1134,51 @@ class AuthViewModelTest {
         )
     }
 
+    @Test
+    fun initialBiometricStateComesFromRepository() = runTest {
+        val repository = FakeAuthRepository(
+            biometricEnabledValue = true
+        )
+
+        val viewModel = AuthViewModel(repository)
+
+        assertEquals(
+            true,
+            viewModel.isBiometricEnabled.value
+        )
+    }
+
+    @Test
+    fun toggleBiometricPersistsValueThroughRepository() = runTest {
+        val repository = FakeAuthRepository(
+            biometricEnabledValue = false
+        )
+
+        val viewModel = AuthViewModel(repository)
+
+        viewModel.toggleBiometric(true)
+
+        assertEquals(
+            1,
+            repository.setBiometricEnabledCalls
+        )
+
+        assertEquals(
+            true,
+            repository.lastBiometricEnabledValue
+        )
+
+        assertEquals(
+            true,
+            repository.biometricEnabledValue
+        )
+
+        assertEquals(
+            true,
+            viewModel.isBiometricEnabled.value
+        )
+    }
+
     private class FakeAuthRepository(
         var loginResult: AppResult<Unit, AppError> =
             AppResult.Success(Unit),
@@ -1159,9 +1204,17 @@ class AuthViewModelTest {
         var currentTokenValue: String? = null,
 
         var revokeSessionResult: AppResult<Unit, AppError> =
-            AppResult.Success(Unit)
+            AppResult.Success(Unit),
+
+        var biometricEnabledValue: Boolean = false
 
     ) : AuthRepository {
+
+        var setBiometricEnabledCalls: Int = 0
+            private set
+
+        var lastBiometricEnabledValue: Boolean? = null
+            private set
 
         var revokeSessionCalls: Int = 0
             private set
@@ -1242,6 +1295,15 @@ class AuthViewModelTest {
 
         var lastLoginPassword: String? = null
             private set
+
+        override fun isBiometricEnabled(): Boolean =
+            biometricEnabledValue
+
+        override fun setBiometricEnabled(enabled: Boolean) {
+            setBiometricEnabledCalls++
+            lastBiometricEnabledValue = enabled
+            biometricEnabledValue = enabled
+        }
 
         override fun observeCurrentUser(): Flow<UserEntity?> =
             currentUserFlow

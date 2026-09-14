@@ -2,7 +2,6 @@ package com.brunno.appkmp.presentation.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.brunno.appkmp.data.repository.AuthRepositoryImpl
 import com.brunno.appkmp.domain.error.AppError
 import com.brunno.appkmp.domain.error.AppResult
 import com.brunno.appkmp.domain.repository.AuthRepository
@@ -37,7 +36,7 @@ class AuthViewModel(
     val autoLoginState = _autoLoginState.asStateFlow()
 
     private val _isBiometricEnabled = MutableStateFlow(
-        (authRepository as? AuthRepositoryImpl)?.isBiometricEnabled() ?: false
+        authRepository.isBiometricEnabled()
     )
     val isBiometricEnabled: StateFlow<Boolean> = _isBiometricEnabled.asStateFlow()
 
@@ -84,7 +83,7 @@ class AuthViewModel(
     }
 
     fun toggleBiometric(enabled: Boolean) {
-        (authRepository as? AuthRepositoryImpl)?.setBiometricEnabled(enabled)
+        authRepository.setBiometricEnabled(enabled)
         _isBiometricEnabled.value = enabled
     }
 
