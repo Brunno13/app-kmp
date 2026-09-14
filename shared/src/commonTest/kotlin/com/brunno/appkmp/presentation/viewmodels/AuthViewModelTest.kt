@@ -930,6 +930,172 @@ class AuthViewModelTest {
         )
     }
 
+    @Test
+    fun checkAutoLoginWithoutUserKeepsStateIdle() = runTest {
+        val repository = FakeAuthRepository()
+        val viewModel = AuthViewModel(repository)
+
+        backgroundScope.launch(
+            UnconfinedTestDispatcher(testScheduler)
+        ) {
+            viewModel.currentUser.collect()
+        }
+
+        advanceUntilIdle()
+
+        viewModel.checkAutoLogin(
+            isDeviceBiometricAvailable = true
+        )
+
+        assertEquals(
+            AutoLoginState.Idle,
+            viewModel.autoLoginState.value
+        )
+
+        assertEquals(
+            0,
+            repository.logoutCalls
+        )
+    }
+
+    @Test
+    fun checkAutoLoginWithoutBiometricProceedsToHome() = runTest {
+        val repository = FakeAuthRepository()
+        val viewModel = AuthViewModel(repository)
+
+        backgroundScope.launch(
+            UnconfinedTestDispatcher(testScheduler)
+        ) {
+            viewModel.currentUser.collect()
+        }
+
+        repository.currentUserFlow.value =
+            UserEntity(
+                id = 10,
+                name = "Test User",
+                email = "test@example.com"
+            )
+
+        advanceUntilIdle()
+
+        assertEquals(
+            false,
+            viewModel.isBiometricEnabled.value
+        )
+
+        viewModel.checkAutoLogin(
+            isDeviceBiometricAvailable = true
+        )
+
+        assertEquals(
+            AutoLoginState.ProceedToHome,
+            viewModel.autoLoginState.value
+        )
+
+        assertEquals(
+            0,
+            repository.logoutCalls
+        )
+    }
+
+    @Test
+    fun checkAutoLoginWithAvailableBiometricRequestsBiometrics() = runTest {
+        val repository = FakeAuthRepository()
+        val viewModel = AuthViewModel(repository)
+
+        backgroundScope.launch(
+            UnconfinedTestDispatcher(testScheduler)
+        ) {
+            viewModel.currentUser.collect()
+        }
+
+        repository.currentUserFlow.value =
+            UserEntity(
+                id = 10,
+                name = "Test User",
+                email = "test@example.com"
+            )
+
+        advanceUntilIdle()
+
+        // O FakeAuthRepository não é AuthRepositoryImpl,
+        // então isto altera apenas o estado local do ViewModel.
+        viewModel.toggleBiometric(true)
+
+        assertEquals(
+            true,
+            viewModel.isBiometricEnabled.value
+        )
+
+        viewModel.checkAutoLogin(
+            isDeviceBiometricAvailable = true
+        )
+
+        assertEquals(
+            AutoLoginState.RequestBiometrics,
+            viewModel.autoLoginState.value
+        )
+
+        assertEquals(
+            0,
+            repository.logoutCalls
+        )
+    }
+
+    @Test
+    fun checkAutoLoginWithUnavailableBiometricLogsOutAndMarksBiometricsRevoked() = runTest {
+        val repository = FakeAuthRepository()
+        val viewModel = AuthViewModel(repository)
+
+        backgroundScope.launch(
+            UnconfinedTestDispatcher(testScheduler)
+        ) {
+            viewModel.currentUser.collect()
+        }
+
+        repository.currentUserFlow.value =
+            UserEntity(
+                id = 10,
+                name = "Test User",
+                email = "test@example.com"
+            )
+
+        advanceUntilIdle()
+
+        viewModel.toggleBiometric(true)
+
+        assertEquals(
+            true,
+            viewModel.isBiometricEnabled.value
+        )
+
+        viewModel.checkAutoLogin(
+            isDeviceBiometricAvailable = false
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(
+            1,
+            repository.logoutCalls
+        )
+
+        assertEquals(
+            false,
+            viewModel.isBiometricEnabled.value
+        )
+
+        assertEquals(
+            LoginUiState.Idle,
+            viewModel.uiState.value
+        )
+
+        assertEquals(
+            AutoLoginState.BiometricsRevoked,
+            viewModel.autoLoginState.value
+        )
+    }
+
     private class FakeAuthRepository(
         var loginResult: AppResult<Unit, AppError> =
             AppResult.Success(Unit),
