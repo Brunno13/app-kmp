@@ -776,6 +776,127 @@ class AuthRepositoryImplTest {
         )
     }
 
+    @Test
+    fun syncAvatarUpdatesLocalAvatarWhenRemoteContentChanges() = runTest {
+        val fixture = createFixture(
+            getAvatarResponse = byteArrayOf(1, 2, 3)
+        )
+
+        fixture.userDao.insertUser(
+            UserEntity(
+                id = 10,
+                name = "Test User",
+                email = "test@example.com",
+                avatarFilename = "old-avatar.png",
+                avatarData = "old-base64"
+            )
+        )
+
+        fixture.repository.syncAvatar(
+            "https://example.com/api/avatar/server-avatar.png"
+        )
+
+        assertEquals(1, fixture.api.getAvatarCalls)
+
+        assertEquals(
+            "server-avatar.png",
+            fixture.api.lastGetAvatarFilename
+        )
+
+        val savedUser = fixture.userDao.users.single()
+
+        assertEquals(10, savedUser.id)
+        assertEquals("Test User", savedUser.name)
+        assertEquals("test@example.com", savedUser.email)
+
+        assertEquals(
+            "server-avatar.png",
+            savedUser.avatarFilename
+        )
+
+        // byteArrayOf(1, 2, 3) em Base64.
+        assertEquals(
+            "AQID",
+            savedUser.avatarData
+        )
+
+        // Uma escrita para preparar o teste + uma do sync.
+        assertEquals(2, fixture.userDao.insertUserCalls)
+    }
+
+    @Test
+    fun syncAvatarDoesNotRewriteLocalUserWhenContentIsUnchanged() = runTest {
+        val fixture = createFixture(
+            getAvatarResponse = byteArrayOf(1, 2, 3)
+        )
+
+        val originalUser = UserEntity(
+            id = 10,
+            name = "Test User",
+            email = "test@example.com",
+            avatarFilename = "existing-avatar.png",
+            avatarData = "AQID"
+        )
+
+        fixture.userDao.insertUser(originalUser)
+
+        fixture.repository.syncAvatar(
+            "https://example.com/api/avatar/server-avatar.png"
+        )
+
+        assertEquals(1, fixture.api.getAvatarCalls)
+
+        assertEquals(
+            "server-avatar.png",
+            fixture.api.lastGetAvatarFilename
+        )
+
+        assertEquals(
+            originalUser,
+            fixture.userDao.users.single()
+        )
+
+        // Somente a escrita usada para preparar o teste.
+        assertEquals(1, fixture.userDao.insertUserCalls)
+    }
+
+    @Test
+    fun syncAvatarKeepsLocalUserWhenRemoteDownloadFails() = runTest {
+        val originalUser = UserEntity(
+            id = 10,
+            name = "Test User",
+            email = "test@example.com",
+            avatarFilename = "existing-avatar.png",
+            avatarData = "existing-base64"
+        )
+
+        val fixture = createFixture(
+            getAvatarFailure =
+                IllegalStateException("Avatar download failed")
+        )
+
+        fixture.userDao.insertUser(originalUser)
+
+        // syncAvatar captura internamente a exceção.
+        fixture.repository.syncAvatar(
+            "https://example.com/api/avatar/server-avatar.png"
+        )
+
+        assertEquals(1, fixture.api.getAvatarCalls)
+
+        assertEquals(
+            "server-avatar.png",
+            fixture.api.lastGetAvatarFilename
+        )
+
+        assertEquals(
+            originalUser,
+            fixture.userDao.users.single()
+        )
+
+        assertEquals(1, fixture.userDao.insertUserCalls)
+    }
+
     private fun createFixture(
         settings: MapSettings = MapSettings(),
         loginResponse: LoginResponse = LoginResponse(),
@@ -794,7 +915,9 @@ class AuthRepositoryImplTest {
                 url = "https://example.com/api/avatar/default.png"
             ),
 
-        updateUserFailure: Exception? = null
+        updateUserFailure: Exception? = null,
+        getAvatarResponse: ByteArray = byteArrayOf(),
+        getAvatarFailure: Exception? = null
     ): Fixture {
         val api = FakeAuthApi(
             loginResponse = loginResponse,
@@ -807,7 +930,9 @@ class AuthRepositoryImplTest {
             forgotPasswordFailure = forgotPasswordFailure,
             changePasswordFailure = changePasswordFailure,
             uploadAvatarResponse = uploadAvatarResponse,
-            updateUserFailure = updateUserFailure
+            updateUserFailure = updateUserFailure,
+            getAvatarResponse = getAvatarResponse,
+            getAvatarFailure = getAvatarFailure
         )
 
         val userDao = FakeUserDao()
@@ -850,8 +975,16 @@ class AuthRepositoryImplTest {
         var forgotPasswordFailure: Exception? = null,
         var changePasswordFailure: Exception? = null,
         var uploadAvatarResponse: AvatarUploadResponse,
-        var updateUserFailure: Exception? = null
+        var updateUserFailure: Exception? = null,
+        var getAvatarResponse: ByteArray = byteArrayOf(),
+        var getAvatarFailure: Exception? = null
     ) : AuthApi {
+
+        var getAvatarCalls: Int = 0
+            private set
+
+        var lastGetAvatarFilename: String? = null
+            private set
 
         var uploadAvatarCalls: Int = 0
             private set
@@ -990,10 +1123,22 @@ class AuthRepositoryImplTest {
 
         override suspend fun getAvatar(
             filename: String
-        ): ByteArray = unused()
+        ): ByteArray {
+            getAvatarCalls++
+            lastGetAvatarFilename = filename
+
+            getAvatarFailure?.let {
+                throw it
+            }
+
+            return getAvatarResponse
+        }
     }
 
     private class FakeUserDao : UserDao {
+
+        var insertUserCalls: Int = 0
+            private set
 
         private val usersFlow =
             MutableStateFlow<List<UserEntity>>(emptyList())
@@ -1005,6 +1150,7 @@ class AuthRepositoryImplTest {
             private set
 
         override suspend fun insertUser(user: UserEntity) {
+            insertUserCalls++
             usersFlow.value = listOf(user)
         }
 
