@@ -102,6 +102,7 @@ class AuthViewModel(
                         authRepository.logout()
                         resetState()
                         resetAutoLoginState()
+                        _isBiometricEnabled.value = false
                         onCurrentSessionRevoked()
                     }
                 }

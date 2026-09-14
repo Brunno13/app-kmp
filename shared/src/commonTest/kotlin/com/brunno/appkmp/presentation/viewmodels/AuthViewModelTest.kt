@@ -1199,6 +1199,45 @@ class AuthViewModelTest {
         )
     }
 
+    @Test
+    fun revokeCurrentSessionDisablesBiometricState() = runTest {
+        val repository = FakeAuthRepository(
+            currentTokenValue = "current-token",
+            revokeSessionResult = AppResult.Success(Unit)
+        )
+
+        val viewModel = AuthViewModel(repository)
+
+        viewModel.toggleBiometric(true)
+
+        assertEquals(
+            true,
+            viewModel.isBiometricEnabled.value
+        )
+
+        viewModel.revokeSession(
+            token = "current-token"
+        ) {
+        }
+
+        advanceUntilIdle()
+
+        assertEquals(
+            1,
+            repository.revokeSessionCalls
+        )
+
+        assertEquals(
+            1,
+            repository.logoutCalls
+        )
+
+        assertEquals(
+            false,
+            viewModel.isBiometricEnabled.value
+        )
+    }
+
     private class FakeAuthRepository(
         var loginResult: AppResult<Unit, AppError> =
             AppResult.Success(Unit),
