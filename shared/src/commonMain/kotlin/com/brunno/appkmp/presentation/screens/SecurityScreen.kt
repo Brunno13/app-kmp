@@ -38,6 +38,7 @@ fun SecurityScreen(
     var showSuccessMessage by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
     val activeSessions by viewModel.activeSessions.collectAsState()
+    val sessionError by viewModel.sessionError.collectAsState()
     val biometricManager = rememberBiometricManager()
     val isBiometricAvailable = remember { biometricManager.isBiometricAvailable() }
     val biometricEnabled by viewModel.isBiometricEnabled.collectAsState()
@@ -185,12 +186,23 @@ fun SecurityScreen(
             )
             Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
 
-            if (activeSessions.isEmpty()) {
-                MenuCard(
-                    title = stringResource(Res.string.empty_sessions_title),
-                    subtitle = stringResource(Res.string.empty_sessions_desc),
-                    icon = Icons.Default.Info,
+            if (sessionError != null) {
+                Text(
+                    text = sessionError!!.asString(),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
                 )
+                Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
+            }
+
+            if (activeSessions.isEmpty()) {
+                if (sessionError == null) {
+                    MenuCard(
+                        title = stringResource(Res.string.empty_sessions_title),
+                        subtitle = stringResource(Res.string.empty_sessions_desc),
+                        icon = Icons.Default.Info,
+                    )
+                }
             } else {
                 activeSessions.forEach { session ->
                     val unknownDeviceText = stringResource(Res.string.label_unknown_device)
