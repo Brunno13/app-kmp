@@ -187,20 +187,82 @@ class AuthRepositoryImplTest {
         assertTrue(fixture.userDao.users.isEmpty())
     }
 
+    @Test
+    fun logoutClearsLocalState() = runTest {
+        val settings = MapSettings().apply {
+            putString("auth_token", "token-123")
+            putBoolean("biometric_enabled", true)
+        }
+
+        val fixture = createFixture(
+            settings = settings
+        )
+
+        fixture.userDao.insertUser(
+            UserEntity(
+                name = "Test User",
+                email = "test@example.com"
+            )
+        )
+
+        fixture.repository.logout()
+
+        assertEquals(1, fixture.api.logoutCalls)
+        assertEquals(1, fixture.userDao.clearSessionCalls)
+        assertEquals(1, fixture.sessionDao.clearAllCalls)
+
+        assertTrue(fixture.userDao.users.isEmpty())
+        assertNull(settings.getStringOrNull("auth_token"))
+        assertFalse(settings.getBoolean("biometric_enabled", false))
+    }
+
+    @Test
+    fun logoutClearsLocalStateEvenWhenRemoteLogoutFails() = runTest {
+        val settings = MapSettings().apply {
+            putString("auth_token", "token-123")
+            putBoolean("biometric_enabled", true)
+        }
+
+        val fixture = createFixture(
+            settings = settings,
+            logoutFailure = IllegalStateException("Remote logout failed")
+        )
+
+        fixture.userDao.insertUser(
+            UserEntity(
+                name = "Test User",
+                email = "test@example.com"
+            )
+        )
+
+        fixture.repository.logout()
+
+        assertEquals(1, fixture.api.logoutCalls)
+        assertEquals(1, fixture.userDao.clearSessionCalls)
+        assertEquals(1, fixture.sessionDao.clearAllCalls)
+
+        assertTrue(fixture.userDao.users.isEmpty())
+        assertNull(settings.getStringOrNull("auth_token"))
+        assertFalse(settings.getBoolean("biometric_enabled", false))
+    }
+
     private fun createFixture(
         settings: MapSettings = MapSettings(),
-        loginResponse: LoginResponse = LoginResponse()
+        loginResponse: LoginResponse = LoginResponse(),
+        logoutFailure: Exception? = null
     ): Fixture {
         val api = FakeAuthApi(
-            loginResponse = loginResponse
+            loginResponse = loginResponse,
+            logoutFailure = logoutFailure
         )
 
         val userDao = FakeUserDao()
+        val sessionDao = FakeSessionDao()
 
         val repository = AuthRepositoryImpl(
             api = api,
             dao = userDao,
-            sessionDao = NoOpSessionDao(),
+            sessionDao = sessionDao,
             settings = settings
         )
 
@@ -208,6 +270,7 @@ class AuthRepositoryImplTest {
             repository = repository,
             api = api,
             userDao = userDao,
+            sessionDao = sessionDao,
             settings = settings
         )
     }
@@ -216,12 +279,17 @@ class AuthRepositoryImplTest {
         val repository: AuthRepositoryImpl,
         val api: FakeAuthApi,
         val userDao: FakeUserDao,
+        val sessionDao: FakeSessionDao,
         val settings: MapSettings
     )
 
     private class FakeAuthApi(
-        var loginResponse: LoginResponse
+        var loginResponse: LoginResponse,
+        var logoutFailure: Exception? = null
     ) : AuthApi {
+
+        var logoutCalls: Int = 0
+            private set
 
         var lastLoginRequest: LoginRequest? = null
             private set
@@ -256,7 +324,13 @@ class AuthRepositoryImplTest {
             request: RevokeSessionRequest
         ): RevokeSessionResponse = unused()
 
-        override suspend fun logout(): Unit = unused()
+        override suspend fun logout() {
+            logoutCalls++
+
+            logoutFailure?.let {
+                throw it
+            }
+        }
 
         override suspend fun uploadAvatar(
             request: AvatarUpdateRequest
@@ -291,7 +365,10 @@ class AuthRepositoryImplTest {
         }
     }
 
-    private class NoOpSessionDao : SessionDao {
+    private class FakeSessionDao : SessionDao {
+
+        var clearAllCalls: Int = 0
+            private set
 
         override suspend fun insertAll(
             sessions: List<SessionEntity>
@@ -307,7 +384,7 @@ class AuthRepositoryImplTest {
         }
 
         override suspend fun clearAll() {
-            unused()
+            clearAllCalls++
         }
     }
 
