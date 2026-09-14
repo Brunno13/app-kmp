@@ -98,6 +98,7 @@ kotlin {
         commonTest.dependencies {
             implementation(kotlin("test"))
             implementation("com.russhwolf:multiplatform-settings-test:1.1.1")
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
         }
     }
 }
