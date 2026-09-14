@@ -10,6 +10,8 @@ plugins {
     alias(libs.plugins.kotlinx.serialization)
 
     alias(libs.plugins.ktorfit)
+
+    alias(libs.plugins.kover)
 }
 
 kotlin {
