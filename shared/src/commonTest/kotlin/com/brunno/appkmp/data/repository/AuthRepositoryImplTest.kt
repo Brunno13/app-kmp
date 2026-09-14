@@ -32,6 +32,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import com.brunno.appkmp.domain.error.NetworkError
+import kotlinx.coroutines.flow.first
 
 class AuthRepositoryImplTest {
 
@@ -895,6 +896,76 @@ class AuthRepositoryImplTest {
         )
 
         assertEquals(1, fixture.userDao.insertUserCalls)
+    }
+
+    @Test
+    fun observeCurrentUserReturnsPersistedUser() = runTest {
+        val fixture = createFixture()
+
+        val user = UserEntity(
+            id = 10,
+            name = "Test User",
+            email = "test@example.com",
+            avatarFilename = "avatar.png",
+            avatarData = "avatar-base64"
+        )
+
+        fixture.userDao.insertUser(user)
+
+        val observedUser =
+            fixture.repository.observeCurrentUser().first()
+
+        assertEquals(
+            user,
+            observedUser
+        )
+    }
+
+    @Test
+    fun observeCurrentUserReturnsNullWhenNoUserIsPersisted() = runTest {
+        val fixture = createFixture()
+
+        val observedUser =
+            fixture.repository.observeCurrentUser().first()
+
+        assertNull(observedUser)
+    }
+
+    @Test
+    fun observeActiveSessionsMapsPersistedSessionsToDomain() = runTest {
+        val fixture = createFixture(
+            initialSessions = listOf(
+                SessionEntity(
+                    token = "token-1",
+                    id = "session-1",
+                    expiresAt = "2026-10-01T10:00:00Z",
+                    createdAt = "2026-09-01T10:00:00Z",
+                    updatedAt = "2026-09-02T10:00:00Z",
+                    ipAddress = "192.168.31.10",
+                    userAgent = "Test Agent",
+                    userId = "user-1"
+                )
+            )
+        )
+
+        val sessions =
+            fixture.repository.observeActiveSessions().first()
+
+        assertEquals(
+            listOf(
+                ActiveSession(
+                    id = "session-1",
+                    expiresAt = "2026-10-01T10:00:00Z",
+                    token = "token-1",
+                    createdAt = "2026-09-01T10:00:00Z",
+                    updatedAt = "2026-09-02T10:00:00Z",
+                    ipAddress = "192.168.31.10",
+                    userAgent = "Test Agent",
+                    userId = "user-1"
+                )
+            ),
+            sessions
+        )
     }
 
     private fun createFixture(
