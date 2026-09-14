@@ -419,6 +419,79 @@ class AuthRepositoryImplTest {
         )
     }
 
+    @Test
+    fun updateUserPersistsRemoteUserData() = runTest {
+        val fixture = createFixture(
+            updateUserResponse = UpdateUserResponse(
+                user = BetterAuthUser(
+                    id = "user-123",
+                    name = "Updated Name",
+                    email = "updated@example.com"
+                )
+            )
+        )
+
+        fixture.userDao.insertUser(
+            UserEntity(
+                id = 10,
+                name = "Old Name",
+                email = "old@example.com",
+                avatarFilename = "avatar.png",
+                avatarData = "avatar-data"
+            )
+        )
+
+        val result = fixture.repository.updateUser("Requested Name")
+
+        assertIs<AppResult.Success<*>>(result)
+
+        assertEquals(1, fixture.api.updateUserCalls)
+        assertEquals(
+            UpdateUserRequest(name = "Requested Name"),
+            fixture.api.lastUpdateUserRequest
+        )
+
+        val savedUser = fixture.userDao.users.single()
+
+        assertEquals(10, savedUser.id)
+        assertEquals("Updated Name", savedUser.name)
+        assertEquals("updated@example.com", savedUser.email)
+
+        // Campos não relacionados devem ser preservados.
+        assertEquals("avatar.png", savedUser.avatarFilename)
+        assertEquals("avatar-data", savedUser.avatarData)
+    }
+
+    @Test
+    fun updateUserFallsBackToRequestedNameAndKeepsLocalEmail() = runTest {
+        val fixture = createFixture(
+            updateUserResponse = UpdateUserResponse()
+        )
+
+        fixture.userDao.insertUser(
+            UserEntity(
+                id = 10,
+                name = "Old Name",
+                email = "local@example.com"
+            )
+        )
+
+        val result = fixture.repository.updateUser("Requested Name")
+
+        assertIs<AppResult.Success<*>>(result)
+
+        assertEquals(1, fixture.api.updateUserCalls)
+        assertEquals(
+            UpdateUserRequest(name = "Requested Name"),
+            fixture.api.lastUpdateUserRequest
+        )
+
+        val savedUser = fixture.userDao.users.single()
+
+        assertEquals("Requested Name", savedUser.name)
+        assertEquals("local@example.com", savedUser.email)
+    }
+
     private fun createFixture(
         settings: MapSettings = MapSettings(),
         loginResponse: LoginResponse = LoginResponse(),
@@ -426,14 +499,16 @@ class AuthRepositoryImplTest {
         sessionsResponse: List<ActiveSession> = emptyList(),
         listSessionsFailure: Exception? = null,
         initialSessions: List<SessionEntity> = emptyList(),
-        revokeSessionFailure: Exception? = null
+        revokeSessionFailure: Exception? = null,
+        updateUserResponse: UpdateUserResponse = UpdateUserResponse()
     ): Fixture {
         val api = FakeAuthApi(
             loginResponse = loginResponse,
             logoutFailure = logoutFailure,
             sessionsResponse = sessionsResponse,
             listSessionsFailure = listSessionsFailure,
-            revokeSessionFailure = revokeSessionFailure
+            revokeSessionFailure = revokeSessionFailure,
+            updateUserResponse = updateUserResponse
         )
 
         val userDao = FakeUserDao()
@@ -470,8 +545,15 @@ class AuthRepositoryImplTest {
         var logoutFailure: Exception? = null,
         var sessionsResponse: List<ActiveSession> = emptyList(),
         var listSessionsFailure: Exception? = null,
-        var revokeSessionFailure: Exception? = null
+        var revokeSessionFailure: Exception? = null,
+        var updateUserResponse: UpdateUserResponse = UpdateUserResponse()
     ) : AuthApi {
+
+        var updateUserCalls: Int = 0
+            private set
+
+        var lastUpdateUserRequest: UpdateUserRequest? = null
+            private set
 
         var revokeSessionCalls: Int = 0
             private set
@@ -509,7 +591,12 @@ class AuthRepositoryImplTest {
 
         override suspend fun updateUser(
             request: UpdateUserRequest
-        ): UpdateUserResponse = unused()
+        ): UpdateUserResponse {
+            updateUserCalls++
+            lastUpdateUserRequest = request
+
+            return updateUserResponse
+        }
 
         override suspend fun listSessions(): List<ActiveSession> {
             listSessionsCalls++
