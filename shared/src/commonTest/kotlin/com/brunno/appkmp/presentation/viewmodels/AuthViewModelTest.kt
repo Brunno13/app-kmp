@@ -642,6 +642,50 @@ class AuthViewModelTest {
         )
     }
 
+    @Test
+    fun syncAvatarIfNeededCallsRepositoryWhenFilenameIsValid() = runTest {
+        val repository = FakeAuthRepository()
+        val viewModel = AuthViewModel(repository)
+
+        viewModel.syncAvatarIfNeeded(
+            "https://example.com/api/avatar/avatar.png"
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(
+            1,
+            repository.syncAvatarCalls
+        )
+
+        assertEquals(
+            "https://example.com/api/avatar/avatar.png",
+            repository.lastSyncAvatarFilename
+        )
+    }
+
+    @Test
+    fun syncAvatarIfNeededIgnoresNullAndBlankFilename() = runTest {
+        val repository = FakeAuthRepository()
+        val viewModel = AuthViewModel(repository)
+
+        viewModel.syncAvatarIfNeeded(null)
+        viewModel.syncAvatarIfNeeded("")
+        viewModel.syncAvatarIfNeeded("   ")
+
+        advanceUntilIdle()
+
+        assertEquals(
+            0,
+            repository.syncAvatarCalls
+        )
+
+        assertEquals(
+            null,
+            repository.lastSyncAvatarFilename
+        )
+    }
+
     private class FakeAuthRepository(
         var loginResult: AppResult<Unit, AppError> =
             AppResult.Success(Unit),
@@ -662,6 +706,12 @@ class AuthViewModelTest {
             AppResult.Success(Unit)
 
     ) : AuthRepository {
+
+        var syncAvatarCalls: Int = 0
+            private set
+
+        var lastSyncAvatarFilename: String? = null
+            private set
 
         var logoutCalls: Int = 0
             private set
@@ -820,6 +870,8 @@ class AuthViewModelTest {
         override suspend fun syncAvatar(
             filename: String
         ) {
+            syncAvatarCalls++
+            lastSyncAvatarFilename = filename
         }
     }
 }
