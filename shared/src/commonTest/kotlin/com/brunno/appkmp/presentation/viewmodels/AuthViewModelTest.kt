@@ -1096,6 +1096,44 @@ class AuthViewModelTest {
         )
     }
 
+    @Test
+    fun onBiometricSuccessProceedsToHome() = runTest {
+        val repository = FakeAuthRepository()
+        val viewModel = AuthViewModel(repository)
+
+        assertEquals(
+            AutoLoginState.Idle,
+            viewModel.autoLoginState.value
+        )
+
+        viewModel.onBiometricSuccess()
+
+        assertEquals(
+            AutoLoginState.ProceedToHome,
+            viewModel.autoLoginState.value
+        )
+    }
+
+    @Test
+    fun resetAutoLoginStateReturnsStateToIdle() = runTest {
+        val repository = FakeAuthRepository()
+        val viewModel = AuthViewModel(repository)
+
+        viewModel.onBiometricSuccess()
+
+        assertEquals(
+            AutoLoginState.ProceedToHome,
+            viewModel.autoLoginState.value
+        )
+
+        viewModel.resetAutoLoginState()
+
+        assertEquals(
+            AutoLoginState.Idle,
+            viewModel.autoLoginState.value
+        )
+    }
+
     private class FakeAuthRepository(
         var loginResult: AppResult<Unit, AppError> =
             AppResult.Success(Unit),
