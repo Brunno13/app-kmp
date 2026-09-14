@@ -568,6 +568,106 @@ class AuthRepositoryImplTest {
         assertTrue(fixture.userDao.users.isEmpty())
     }
 
+    @Test
+    fun forgotPasswordSendsExpectedRequest() = runTest {
+        val fixture = createFixture()
+
+        val result = fixture.repository.forgotPassword(
+            email = "test@example.com"
+        )
+
+        assertIs<AppResult.Success<*>>(result)
+
+        assertEquals(1, fixture.api.forgotPasswordCalls)
+
+        assertEquals(
+            ForgotPasswordRequest(
+                email = "test@example.com"
+            ),
+            fixture.api.lastForgotPasswordRequest
+        )
+    }
+
+    @Test
+    fun forgotPasswordReturnsNetworkErrorWhenRemoteRequestFails() = runTest {
+        val fixture = createFixture(
+            forgotPasswordFailure =
+                IllegalStateException("Remote failure")
+        )
+
+        val result = fixture.repository.forgotPassword(
+            email = "test@example.com"
+        )
+
+        val error = assertIs<AppResult.Error<*>>(result)
+
+        assertEquals(
+            NetworkError.UNKNOWN,
+            error.error
+        )
+
+        assertEquals(1, fixture.api.forgotPasswordCalls)
+
+        assertEquals(
+            ForgotPasswordRequest(
+                email = "test@example.com"
+            ),
+            fixture.api.lastForgotPasswordRequest
+        )
+    }
+
+    @Test
+    fun changePasswordSendsExpectedRequest() = runTest {
+        val fixture = createFixture()
+
+        val result = fixture.repository.changePassword(
+            currentPassword = "old-password",
+            newPassword = "new-password"
+        )
+
+        assertIs<AppResult.Success<*>>(result)
+
+        assertEquals(1, fixture.api.changePasswordCalls)
+
+        assertEquals(
+            ChangePasswordRequest(
+                newPassword = "new-password",
+                currentPassword = "old-password"
+            ),
+            fixture.api.lastChangePasswordRequest
+        )
+    }
+
+    @Test
+    fun changePasswordReturnsNetworkErrorWhenRemoteRequestFails() = runTest {
+        val fixture = createFixture(
+            changePasswordFailure =
+                IllegalStateException("Remote failure")
+        )
+
+        val result = fixture.repository.changePassword(
+            currentPassword = "old-password",
+            newPassword = "new-password"
+        )
+
+        val error = assertIs<AppResult.Error<*>>(result)
+
+        assertEquals(
+            NetworkError.UNKNOWN,
+            error.error
+        )
+
+        assertEquals(1, fixture.api.changePasswordCalls)
+
+        assertEquals(
+            ChangePasswordRequest(
+                newPassword = "new-password",
+                currentPassword = "old-password"
+            ),
+            fixture.api.lastChangePasswordRequest
+        )
+    }
+
     private fun createFixture(
         settings: MapSettings = MapSettings(),
         loginResponse: LoginResponse = LoginResponse(),
@@ -577,7 +677,9 @@ class AuthRepositoryImplTest {
         initialSessions: List<SessionEntity> = emptyList(),
         revokeSessionFailure: Exception? = null,
         updateUserResponse: UpdateUserResponse = UpdateUserResponse(),
-        registerResponse: LoginResponse = LoginResponse()
+        registerResponse: LoginResponse = LoginResponse(),
+        forgotPasswordFailure: Exception? = null,
+        changePasswordFailure: Exception? = null
     ): Fixture {
         val api = FakeAuthApi(
             loginResponse = loginResponse,
@@ -586,7 +688,9 @@ class AuthRepositoryImplTest {
             sessionsResponse = sessionsResponse,
             listSessionsFailure = listSessionsFailure,
             revokeSessionFailure = revokeSessionFailure,
-            updateUserResponse = updateUserResponse
+            updateUserResponse = updateUserResponse,
+            forgotPasswordFailure = forgotPasswordFailure,
+            changePasswordFailure = changePasswordFailure
         )
 
         val userDao = FakeUserDao()
@@ -625,8 +729,22 @@ class AuthRepositoryImplTest {
         var listSessionsFailure: Exception? = null,
         var revokeSessionFailure: Exception? = null,
         var updateUserResponse: UpdateUserResponse = UpdateUserResponse(),
-        var registerResponse: LoginResponse = LoginResponse()
+        var registerResponse: LoginResponse = LoginResponse(),
+        var forgotPasswordFailure: Exception? = null,
+        var changePasswordFailure: Exception? = null
     ) : AuthApi {
+
+        var forgotPasswordCalls: Int = 0
+            private set
+
+        var lastForgotPasswordRequest: ForgotPasswordRequest? = null
+            private set
+
+        var changePasswordCalls: Int = 0
+            private set
+
+        var lastChangePasswordRequest: ChangePasswordRequest? = null
+            private set
 
         var lastRegisterRequest: RegisterRequest? = null
             private set
@@ -668,11 +786,27 @@ class AuthRepositoryImplTest {
 
         override suspend fun forgotPassword(
             request: ForgotPasswordRequest
-        ): Unit = unused()
+        ) {
+            forgotPasswordCalls++
+            lastForgotPasswordRequest = request
+
+            forgotPasswordFailure?.let {
+                throw it
+            }
+        }
 
         override suspend fun changePassword(
             request: ChangePasswordRequest
-        ): ChangePasswordResponse = unused()
+        ): ChangePasswordResponse {
+            changePasswordCalls++
+            lastChangePasswordRequest = request
+
+            changePasswordFailure?.let {
+                throw it
+            }
+
+            return ChangePasswordResponse()
+        }
 
         override suspend fun updateUser(
             request: UpdateUserRequest
