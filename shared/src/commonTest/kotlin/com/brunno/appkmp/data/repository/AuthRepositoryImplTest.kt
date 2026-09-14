@@ -31,6 +31,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import com.brunno.appkmp.domain.error.NetworkError
 
 class AuthRepositoryImplTest {
 
@@ -246,18 +247,106 @@ class AuthRepositoryImplTest {
         assertFalse(settings.getBoolean("biometric_enabled", false))
     }
 
+    @Test
+    fun syncActiveSessionsReplacesLocalSessionsWithValidRemoteSessions() = runTest {
+        val fixture = createFixture(
+            sessionsResponse = listOf(
+                ActiveSession(
+                    id = "session-1",
+                    token = "token-1",
+                    userId = "user-1"
+                ),
+                ActiveSession(
+                    id = null,
+                    token = "invalid-without-id"
+                ),
+                ActiveSession(
+                    id = "invalid-without-token",
+                    token = null
+                ),
+                ActiveSession(
+                    id = "session-2",
+                    token = "token-2",
+                    userId = "user-1"
+                )
+            )
+        )
+
+        val result = fixture.repository.syncActiveSessions()
+
+        assertIs<AppResult.Success<*>>(result)
+
+        assertEquals(1, fixture.api.listSessionsCalls)
+        assertEquals(1, fixture.sessionDao.clearAllCalls)
+        assertEquals(1, fixture.sessionDao.insertAllCalls)
+
+        assertEquals(
+            listOf("token-1", "token-2"),
+            fixture.sessionDao.sessions.map { it.token }
+        )
+
+        assertEquals(
+            listOf("session-1", "session-2"),
+            fixture.sessionDao.sessions.map { it.id }
+        )
+    }
+
+    @Test
+    fun syncActiveSessionsKeepsLocalStateWhenRemoteRequestFails() = runTest {
+        val existingSession = SessionEntity(
+            token = "existing-token",
+            id = "existing-session",
+            expiresAt = null,
+            createdAt = null,
+            updatedAt = null,
+            ipAddress = null,
+            userAgent = null,
+            userId = "user-1"
+        )
+
+        val fixture = createFixture(
+            initialSessions = listOf(existingSession),
+            listSessionsFailure = IllegalStateException("Remote failure")
+        )
+
+        val result = fixture.repository.syncActiveSessions()
+
+        val error = assertIs<AppResult.Error<*>>(result)
+
+        assertEquals(
+            NetworkError.UNKNOWN,
+            error.error
+        )
+
+        assertEquals(1, fixture.api.listSessionsCalls)
+        assertEquals(0, fixture.sessionDao.clearAllCalls)
+        assertEquals(0, fixture.sessionDao.insertAllCalls)
+
+        assertEquals(
+            listOf(existingSession),
+            fixture.sessionDao.sessions
+        )
+    }
+
     private fun createFixture(
         settings: MapSettings = MapSettings(),
         loginResponse: LoginResponse = LoginResponse(),
-        logoutFailure: Exception? = null
+        logoutFailure: Exception? = null,
+        sessionsResponse: List<ActiveSession> = emptyList(),
+        listSessionsFailure: Exception? = null,
+        initialSessions: List<SessionEntity> = emptyList()
     ): Fixture {
         val api = FakeAuthApi(
             loginResponse = loginResponse,
-            logoutFailure = logoutFailure
+            logoutFailure = logoutFailure,
+            sessionsResponse = sessionsResponse,
+            listSessionsFailure = listSessionsFailure
         )
 
         val userDao = FakeUserDao()
-        val sessionDao = FakeSessionDao()
+        val sessionDao = FakeSessionDao(
+            initialSessions = initialSessions
+        )
 
         val repository = AuthRepositoryImpl(
             api = api,
@@ -285,8 +374,13 @@ class AuthRepositoryImplTest {
 
     private class FakeAuthApi(
         var loginResponse: LoginResponse,
-        var logoutFailure: Exception? = null
+        var logoutFailure: Exception? = null,
+        var sessionsResponse: List<ActiveSession> = emptyList(),
+        var listSessionsFailure: Exception? = null
     ) : AuthApi {
+
+        var listSessionsCalls: Int = 0
+            private set
 
         var logoutCalls: Int = 0
             private set
@@ -317,8 +411,15 @@ class AuthRepositoryImplTest {
             request: UpdateUserRequest
         ): UpdateUserResponse = unused()
 
-        override suspend fun listSessions(): List<ActiveSession> =
-            unused()
+        override suspend fun listSessions(): List<ActiveSession> {
+            listSessionsCalls++
+
+            listSessionsFailure?.let {
+                throw it
+            }
+
+            return sessionsResponse
+        }
 
         override suspend fun revokeSession(
             request: RevokeSessionRequest
@@ -365,7 +466,18 @@ class AuthRepositoryImplTest {
         }
     }
 
-    private class FakeSessionDao : SessionDao {
+    private class FakeSessionDao(
+        initialSessions: List<SessionEntity> = emptyList()
+    ) : SessionDao {
+
+        private val sessionsFlow =
+            MutableStateFlow(initialSessions)
+
+        val sessions: List<SessionEntity>
+            get() = sessionsFlow.value
+
+        var insertAllCalls: Int = 0
+            private set
 
         var clearAllCalls: Int = 0
             private set
@@ -373,18 +485,21 @@ class AuthRepositoryImplTest {
         override suspend fun insertAll(
             sessions: List<SessionEntity>
         ) {
-            unused()
+            insertAllCalls++
+            sessionsFlow.value = sessions
         }
 
         override fun observeAllSessions(): Flow<List<SessionEntity>> =
-            MutableStateFlow(emptyList())
+            sessionsFlow
 
         override suspend fun deleteByToken(token: String) {
-            unused()
+            sessionsFlow.value =
+                sessionsFlow.value.filterNot { it.token == token }
         }
 
         override suspend fun clearAll() {
             clearAllCalls++
+            sessionsFlow.value = emptyList()
         }
     }
 
