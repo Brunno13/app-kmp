@@ -393,6 +393,107 @@ class AuthViewModelTest {
         )
     }
 
+    @Test
+    fun updateAvatarSuccessUpdatesUiStateAndForwardsArguments() = runTest {
+        val repository = FakeAuthRepository(
+            updateAvatarResult = AppResult.Success(Unit)
+        )
+
+        val viewModel = AuthViewModel(repository)
+
+        viewModel.updateAvatar(
+            base64 = "avatar-base64",
+            fileName = "avatar.jpg",
+            mimeType = "image/jpeg"
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(
+            1,
+            repository.updateAvatarCalls
+        )
+
+        assertEquals(
+            "avatar-base64",
+            repository.lastUpdateAvatarBase64
+        )
+
+        assertEquals(
+            "avatar.jpg",
+            repository.lastUpdateAvatarFileName
+        )
+
+        assertEquals(
+            "image/jpeg",
+            repository.lastUpdateAvatarMimeType
+        )
+
+        assertEquals(
+            LoginUiState.Success,
+            viewModel.uiState.value
+        )
+
+        assertEquals(
+            AutoLoginState.Idle,
+            viewModel.autoLoginState.value
+        )
+    }
+
+    @Test
+    fun updateAvatarErrorUpdatesUiState() = runTest {
+        val repository = FakeAuthRepository(
+            updateAvatarResult = AppResult.Error(
+                NetworkError.SERVER_ERROR
+            )
+        )
+
+        val viewModel = AuthViewModel(repository)
+
+        viewModel.updateAvatar(
+            base64 = "avatar-base64",
+            fileName = "avatar.jpg",
+            mimeType = "image/jpeg"
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(
+            1,
+            repository.updateAvatarCalls
+        )
+
+        assertEquals(
+            "avatar-base64",
+            repository.lastUpdateAvatarBase64
+        )
+
+        assertEquals(
+            "avatar.jpg",
+            repository.lastUpdateAvatarFileName
+        )
+
+        assertEquals(
+            "image/jpeg",
+            repository.lastUpdateAvatarMimeType
+        )
+
+        val state =
+            assertIs<LoginUiState.Error>(
+                viewModel.uiState.value
+            )
+
+        assertEquals(
+            NetworkError.SERVER_ERROR,
+            state.error
+        )
+
+        assertEquals(
+            AutoLoginState.Idle,
+            viewModel.autoLoginState.value
+        )
+    }
+
     private class FakeAuthRepository(
         var loginResult: AppResult<Unit, AppError> =
             AppResult.Success(Unit),
@@ -404,8 +505,24 @@ class AuthViewModelTest {
             AppResult.Success(Unit),
 
         var updateUserResult: AppResult<Unit, AppError> =
+            AppResult.Success(Unit),
+
+        var updateAvatarResult: AppResult<Unit, AppError> =
             AppResult.Success(Unit)
+
     ) : AuthRepository {
+
+        var updateAvatarCalls: Int = 0
+            private set
+
+        var lastUpdateAvatarBase64: String? = null
+            private set
+
+        var lastUpdateAvatarFileName: String? = null
+            private set
+
+        var lastUpdateAvatarMimeType: String? = null
+            private set
 
         var updateUserCalls: Int = 0
             private set
@@ -522,8 +639,14 @@ class AuthViewModelTest {
             base64: String,
             fileName: String,
             mimeType: String
-        ): AppResult<Unit, AppError> =
-            AppResult.Success(Unit)
+        ): AppResult<Unit, AppError> {
+            updateAvatarCalls++
+            lastUpdateAvatarBase64 = base64
+            lastUpdateAvatarFileName = fileName
+            lastUpdateAvatarMimeType = mimeType
+
+            return updateAvatarResult
+        }
 
         override suspend fun syncAvatar(
             filename: String
