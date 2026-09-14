@@ -494,6 +494,95 @@ class AuthViewModelTest {
         )
     }
 
+    @Test
+    fun changePasswordSuccessUpdatesUiStateAndForwardsArguments() = runTest {
+        val repository = FakeAuthRepository(
+            changePasswordResult = AppResult.Success(Unit)
+        )
+
+        val viewModel = AuthViewModel(repository)
+
+        viewModel.changePassword(
+            current = "old-password",
+            new = "new-password"
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(
+            1,
+            repository.changePasswordCalls
+        )
+
+        assertEquals(
+            "old-password",
+            repository.lastCurrentPassword
+        )
+
+        assertEquals(
+            "new-password",
+            repository.lastNewPassword
+        )
+
+        assertEquals(
+            LoginUiState.Success,
+            viewModel.uiState.value
+        )
+
+        assertEquals(
+            AutoLoginState.Idle,
+            viewModel.autoLoginState.value
+        )
+    }
+
+    @Test
+    fun changePasswordErrorUpdatesUiState() = runTest {
+        val repository = FakeAuthRepository(
+            changePasswordResult = AppResult.Error(
+                AuthError.INVALID_PASSWORD
+            )
+        )
+
+        val viewModel = AuthViewModel(repository)
+
+        viewModel.changePassword(
+            current = "wrong-password",
+            new = "new-password"
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(
+            1,
+            repository.changePasswordCalls
+        )
+
+        assertEquals(
+            "wrong-password",
+            repository.lastCurrentPassword
+        )
+
+        assertEquals(
+            "new-password",
+            repository.lastNewPassword
+        )
+
+        val state =
+            assertIs<LoginUiState.Error>(
+                viewModel.uiState.value
+            )
+
+        assertEquals(
+            AuthError.INVALID_PASSWORD,
+            state.error
+        )
+
+        assertEquals(
+            AutoLoginState.Idle,
+            viewModel.autoLoginState.value
+        )
+    }
+
     private class FakeAuthRepository(
         var loginResult: AppResult<Unit, AppError> =
             AppResult.Success(Unit),
@@ -508,9 +597,21 @@ class AuthViewModelTest {
             AppResult.Success(Unit),
 
         var updateAvatarResult: AppResult<Unit, AppError> =
+            AppResult.Success(Unit),
+
+        var changePasswordResult: AppResult<Unit, AppError> =
             AppResult.Success(Unit)
 
     ) : AuthRepository {
+
+        var changePasswordCalls: Int = 0
+            private set
+
+        var lastCurrentPassword: String? = null
+            private set
+
+        var lastNewPassword: String? = null
+            private set
 
         var updateAvatarCalls: Int = 0
             private set
@@ -615,8 +716,13 @@ class AuthViewModelTest {
         override suspend fun changePassword(
             currentPassword: String,
             newPassword: String
-        ): AppResult<Unit, AppError> =
-            AppResult.Success(Unit)
+        ): AppResult<Unit, AppError> {
+            changePasswordCalls++
+            lastCurrentPassword = currentPassword
+            lastNewPassword = newPassword
+
+            return changePasswordResult
+        }
 
         override suspend fun updateUser(
             name: String
