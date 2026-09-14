@@ -21,6 +21,9 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import com.brunno.appkmp.domain.error.NetworkError
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AuthViewModelTest {
@@ -857,6 +860,73 @@ class AuthViewModelTest {
         assertEquals(
             0,
             callbackCalls
+        )
+    }
+
+    @Test
+    fun currentUserReflectsRepositoryUpdatesWhileSubscribed() = runTest {
+        val repository = FakeAuthRepository()
+        val viewModel = AuthViewModel(repository)
+
+        backgroundScope.launch(
+            UnconfinedTestDispatcher(testScheduler)
+        ) {
+            viewModel.currentUser.collect()
+        }
+
+        val user = UserEntity(
+            id = 10,
+            name = "Test User",
+            email = "test@example.com",
+            avatarFilename = "avatar.png",
+            avatarData = "avatar-base64"
+        )
+
+        repository.currentUserFlow.value = user
+
+        advanceUntilIdle()
+
+        assertEquals(
+            user,
+            viewModel.currentUser.value
+        )
+    }
+
+    @Test
+    fun activeSessionsReflectRepositoryUpdatesWhileSubscribed() = runTest {
+        val repository = FakeAuthRepository()
+        val viewModel = AuthViewModel(repository)
+
+        backgroundScope.launch(
+            UnconfinedTestDispatcher(testScheduler)
+        ) {
+            viewModel.activeSessions.collect()
+        }
+
+        val sessions = listOf(
+            ActiveSession(
+                id = "session-1",
+                token = "token-1",
+                userId = "user-1",
+                ipAddress = "192.168.31.10",
+                userAgent = "Test Agent"
+            ),
+            ActiveSession(
+                id = "session-2",
+                token = "token-2",
+                userId = "user-1",
+                ipAddress = "192.168.31.11",
+                userAgent = "Other Agent"
+            )
+        )
+
+        repository.activeSessionsFlow.value = sessions
+
+        advanceUntilIdle()
+
+        assertEquals(
+            sessions,
+            viewModel.activeSessions.value
         )
     }
 
