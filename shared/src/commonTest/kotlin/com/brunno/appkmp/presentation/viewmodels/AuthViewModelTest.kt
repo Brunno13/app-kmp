@@ -238,13 +238,99 @@ class AuthViewModelTest {
         )
     }
 
+    @Test
+    fun forgotPasswordSuccessUpdatesUiState() = runTest {
+        val repository = FakeAuthRepository(
+            forgotPasswordResult = AppResult.Success(Unit)
+        )
+
+        val viewModel = AuthViewModel(repository)
+
+        viewModel.forgotPassword(
+            email = "test@example.com"
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(
+            1,
+            repository.forgotPasswordCalls
+        )
+
+        assertEquals(
+            "test@example.com",
+            repository.lastForgotPasswordEmail
+        )
+
+        assertEquals(
+            LoginUiState.Success,
+            viewModel.uiState.value
+        )
+
+        assertEquals(
+            AutoLoginState.Idle,
+            viewModel.autoLoginState.value
+        )
+    }
+
+    @Test
+    fun forgotPasswordErrorUpdatesUiState() = runTest {
+        val repository = FakeAuthRepository(
+            forgotPasswordResult = AppResult.Error(
+                AuthError.USER_NOT_FOUND
+            )
+        )
+
+        val viewModel = AuthViewModel(repository)
+
+        viewModel.forgotPassword(
+            email = "missing@example.com"
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(
+            1,
+            repository.forgotPasswordCalls
+        )
+
+        assertEquals(
+            "missing@example.com",
+            repository.lastForgotPasswordEmail
+        )
+
+        val state =
+            assertIs<LoginUiState.Error>(
+                viewModel.uiState.value
+            )
+
+        assertEquals(
+            AuthError.USER_NOT_FOUND,
+            state.error
+        )
+
+        assertEquals(
+            AutoLoginState.Idle,
+            viewModel.autoLoginState.value
+        )
+    }
+
     private class FakeAuthRepository(
         var loginResult: AppResult<Unit, AppError> =
             AppResult.Success(Unit),
 
         var registerResult: AppResult<Unit, AppError> =
+            AppResult.Success(Unit),
+
+        var forgotPasswordResult: AppResult<Unit, AppError> =
             AppResult.Success(Unit)
     ) : AuthRepository {
+
+        var forgotPasswordCalls: Int = 0
+            private set
+
+        var lastForgotPasswordEmail: String? = null
+            private set
 
         var registerCalls: Int = 0
             private set
@@ -315,8 +401,12 @@ class AuthViewModelTest {
 
         override suspend fun forgotPassword(
             email: String
-        ): AppResult<Unit, AppError> =
-            AppResult.Success(Unit)
+        ): AppResult<Unit, AppError> {
+            forgotPasswordCalls++
+            lastForgotPasswordEmail = email
+
+            return forgotPasswordResult
+        }
 
         override suspend fun changePassword(
             currentPassword: String,
