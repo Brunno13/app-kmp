@@ -607,6 +607,11 @@ class AuthViewModelTest {
             viewModel.uiState.value
         )
 
+        assertEquals(
+            AutoLoginState.ProceedToHome,
+            viewModel.autoLoginState.value
+        )
+
         // Para o FakeAuthRepository o cast para AuthRepositoryImpl
         // não acontece, mas o estado local do ViewModel ainda muda.
         viewModel.toggleBiometric(true)
@@ -627,6 +632,11 @@ class AuthViewModelTest {
         assertEquals(
             1,
             repository.logoutCalls
+        )
+
+        assertEquals(
+            AutoLoginState.Idle,
+            viewModel.autoLoginState.value
         )
 
         assertEquals(

@@ -186,6 +186,7 @@ class AuthViewModel(
         viewModelScope.launch {
             authRepository.logout()
             resetState()
+            resetAutoLoginState()
             _isBiometricEnabled.value = false
             onComplete()
         }
