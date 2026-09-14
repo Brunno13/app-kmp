@@ -492,6 +492,82 @@ class AuthRepositoryImplTest {
         assertEquals("local@example.com", savedUser.email)
     }
 
+    @Test
+    fun registerPersistsTokenAndUser() = runTest {
+        val fixture = createFixture(
+            registerResponse = LoginResponse(
+                token = "register-token",
+                user = BetterAuthUser(
+                    id = "user-456",
+                    name = "New User",
+                    email = "new@example.com"
+                )
+            )
+        )
+
+        val result = fixture.repository.register(
+            name = "New User",
+            email = "new@example.com",
+            password = "test-password"
+        )
+
+        assertIs<AppResult.Success<*>>(result)
+
+        assertEquals(
+            RegisterRequest(
+                email = "new@example.com",
+                password = "test-password",
+                name = "New User"
+            ),
+            fixture.api.lastRegisterRequest
+        )
+
+        assertEquals(
+            "register-token",
+            fixture.settings.getStringOrNull("auth_token")
+        )
+
+        assertEquals(1, fixture.userDao.clearSessionCalls)
+
+        val savedUser = fixture.userDao.users.single()
+
+        assertEquals("New User", savedUser.name)
+        assertEquals("new@example.com", savedUser.email)
+    }
+
+    @Test
+    fun registerWithoutValidSessionReturnsUnauthorized() = runTest {
+        val fixture = createFixture(
+            registerResponse = LoginResponse(
+                token = null,
+                user = BetterAuthUser(
+                    name = "New User",
+                    email = "new@example.com"
+                )
+            )
+        )
+
+        val result = fixture.repository.register(
+            name = "New User",
+            email = "new@example.com",
+            password = "test-password"
+        )
+
+        val error = assertIs<AppResult.Error<*>>(result)
+
+        assertEquals(
+            AuthError.UNAUTHORIZED,
+            error.error
+        )
+
+        assertNull(
+            fixture.settings.getStringOrNull("auth_token")
+        )
+
+        assertEquals(0, fixture.userDao.clearSessionCalls)
+        assertTrue(fixture.userDao.users.isEmpty())
+    }
+
     private fun createFixture(
         settings: MapSettings = MapSettings(),
         loginResponse: LoginResponse = LoginResponse(),
@@ -500,10 +576,12 @@ class AuthRepositoryImplTest {
         listSessionsFailure: Exception? = null,
         initialSessions: List<SessionEntity> = emptyList(),
         revokeSessionFailure: Exception? = null,
-        updateUserResponse: UpdateUserResponse = UpdateUserResponse()
+        updateUserResponse: UpdateUserResponse = UpdateUserResponse(),
+        registerResponse: LoginResponse = LoginResponse()
     ): Fixture {
         val api = FakeAuthApi(
             loginResponse = loginResponse,
+            registerResponse = registerResponse,
             logoutFailure = logoutFailure,
             sessionsResponse = sessionsResponse,
             listSessionsFailure = listSessionsFailure,
@@ -546,8 +624,12 @@ class AuthRepositoryImplTest {
         var sessionsResponse: List<ActiveSession> = emptyList(),
         var listSessionsFailure: Exception? = null,
         var revokeSessionFailure: Exception? = null,
-        var updateUserResponse: UpdateUserResponse = UpdateUserResponse()
+        var updateUserResponse: UpdateUserResponse = UpdateUserResponse(),
+        var registerResponse: LoginResponse = LoginResponse()
     ) : AuthApi {
+
+        var lastRegisterRequest: RegisterRequest? = null
+            private set
 
         var updateUserCalls: Int = 0
             private set
@@ -579,7 +661,10 @@ class AuthRepositoryImplTest {
 
         override suspend fun register(
             request: RegisterRequest
-        ): LoginResponse = unused()
+        ): LoginResponse {
+            lastRegisterRequest = request
+            return registerResponse
+        }
 
         override suspend fun forgotPassword(
             request: ForgotPasswordRequest
