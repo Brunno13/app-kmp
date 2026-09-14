@@ -668,6 +668,114 @@ class AuthRepositoryImplTest {
         )
     }
 
+    @Test
+    fun updateAvatarUploadsImageAndPersistsLocalAvatar() = runTest {
+        val avatarUrl =
+            "https://example.com/api/avatar/server-avatar.png"
+
+        val fixture = createFixture(
+            uploadAvatarResponse = AvatarUploadResponse(
+                success = true,
+                url = avatarUrl
+            )
+        )
+
+        fixture.userDao.insertUser(
+            UserEntity(
+                id = 10,
+                name = "Test User",
+                email = "test@example.com",
+                avatarFilename = "old-avatar.png",
+                avatarData = "old-base64"
+            )
+        )
+
+        val result = fixture.repository.updateAvatar(
+            base64 = "new-base64",
+            fileName = "camera.jpg",
+            mimeType = "image/jpeg"
+        )
+
+        assertIs<AppResult.Success<*>>(result)
+
+        assertEquals(1, fixture.api.uploadAvatarCalls)
+
+        assertEquals(
+            AvatarUpdateRequest(
+                avatarBase64 = "new-base64",
+                fileName = "camera.jpg",
+                mimeType = "image/jpeg"
+            ),
+            fixture.api.lastUploadAvatarRequest
+        )
+
+        assertEquals(
+            UpdateUserRequest(
+                image = avatarUrl
+            ),
+            fixture.api.lastUpdateUserRequest
+        )
+
+        val savedUser = fixture.userDao.users.single()
+
+        assertEquals(10, savedUser.id)
+        assertEquals("Test User", savedUser.name)
+        assertEquals("test@example.com", savedUser.email)
+
+        assertEquals(
+            "server-avatar.png",
+            savedUser.avatarFilename
+        )
+
+        assertEquals(
+            "new-base64",
+            savedUser.avatarData
+        )
+    }
+
+    @Test
+    fun updateAvatarDoesNotChangeLocalUserWhenRemoteProfileUpdateFails() = runTest {
+        val originalUser = UserEntity(
+            id = 10,
+            name = "Test User",
+            email = "test@example.com",
+            avatarFilename = "old-avatar.png",
+            avatarData = "old-base64"
+        )
+
+        val fixture = createFixture(
+            uploadAvatarResponse = AvatarUploadResponse(
+                success = true,
+                url = "https://example.com/api/avatar/server-avatar.png"
+            ),
+            updateUserFailure =
+                IllegalStateException("Remote profile update failed")
+        )
+
+        fixture.userDao.insertUser(originalUser)
+
+        val result = fixture.repository.updateAvatar(
+            base64 = "new-base64",
+            fileName = "camera.jpg",
+            mimeType = "image/jpeg"
+        )
+
+        val error = assertIs<AppResult.Error<*>>(result)
+
+        assertEquals(
+            NetworkError.UNKNOWN,
+            error.error
+        )
+
+        assertEquals(1, fixture.api.uploadAvatarCalls)
+        assertEquals(1, fixture.api.updateUserCalls)
+
+        assertEquals(
+            originalUser,
+            fixture.userDao.users.single()
+        )
+    }
+
     private fun createFixture(
         settings: MapSettings = MapSettings(),
         loginResponse: LoginResponse = LoginResponse(),
@@ -679,7 +787,14 @@ class AuthRepositoryImplTest {
         updateUserResponse: UpdateUserResponse = UpdateUserResponse(),
         registerResponse: LoginResponse = LoginResponse(),
         forgotPasswordFailure: Exception? = null,
-        changePasswordFailure: Exception? = null
+        changePasswordFailure: Exception? = null,
+        uploadAvatarResponse: AvatarUploadResponse =
+            AvatarUploadResponse(
+                success = true,
+                url = "https://example.com/api/avatar/default.png"
+            ),
+
+        updateUserFailure: Exception? = null
     ): Fixture {
         val api = FakeAuthApi(
             loginResponse = loginResponse,
@@ -690,7 +805,9 @@ class AuthRepositoryImplTest {
             revokeSessionFailure = revokeSessionFailure,
             updateUserResponse = updateUserResponse,
             forgotPasswordFailure = forgotPasswordFailure,
-            changePasswordFailure = changePasswordFailure
+            changePasswordFailure = changePasswordFailure,
+            uploadAvatarResponse = uploadAvatarResponse,
+            updateUserFailure = updateUserFailure
         )
 
         val userDao = FakeUserDao()
@@ -731,8 +848,16 @@ class AuthRepositoryImplTest {
         var updateUserResponse: UpdateUserResponse = UpdateUserResponse(),
         var registerResponse: LoginResponse = LoginResponse(),
         var forgotPasswordFailure: Exception? = null,
-        var changePasswordFailure: Exception? = null
+        var changePasswordFailure: Exception? = null,
+        var uploadAvatarResponse: AvatarUploadResponse,
+        var updateUserFailure: Exception? = null
     ) : AuthApi {
+
+        var uploadAvatarCalls: Int = 0
+            private set
+
+        var lastUploadAvatarRequest: AvatarUpdateRequest? = null
+            private set
 
         var forgotPasswordCalls: Int = 0
             private set
@@ -814,6 +939,10 @@ class AuthRepositoryImplTest {
             updateUserCalls++
             lastUpdateUserRequest = request
 
+            updateUserFailure?.let {
+                throw it
+            }
+
             return updateUserResponse
         }
 
@@ -852,7 +981,12 @@ class AuthRepositoryImplTest {
 
         override suspend fun uploadAvatar(
             request: AvatarUpdateRequest
-        ): AvatarUploadResponse = unused()
+        ): AvatarUploadResponse {
+            uploadAvatarCalls++
+            lastUploadAvatarRequest = request
+
+            return uploadAvatarResponse
+        }
 
         override suspend fun getAvatar(
             filename: String
