@@ -714,6 +714,152 @@ class AuthViewModelTest {
         )
     }
 
+    @Test
+    fun revokeOtherSessionDoesNotLogoutOrInvokeCurrentSessionCallback() = runTest {
+        val repository = FakeAuthRepository(
+            currentTokenValue = "current-token",
+            revokeSessionResult = AppResult.Error(
+                NetworkError.SERVER_ERROR
+            )
+        )
+
+        val viewModel = AuthViewModel(repository)
+
+        var callbackCalls = 0
+
+        viewModel.revokeSession(
+            token = "other-token"
+        ) {
+            callbackCalls++
+        }
+
+        advanceUntilIdle()
+
+        assertEquals(
+            1,
+            repository.revokeSessionCalls
+        )
+
+        assertEquals(
+            "other-token",
+            repository.lastRevokeSessionToken
+        )
+
+        assertEquals(
+            0,
+            repository.logoutCalls
+        )
+
+        assertEquals(
+            0,
+            callbackCalls
+        )
+
+        assertEquals(
+            LoginUiState.Idle,
+            viewModel.uiState.value
+        )
+    }
+
+    @Test
+    fun revokeCurrentSessionLogsOutResetsStateAndInvokesCallback() = runTest {
+        val repository = FakeAuthRepository(
+            currentTokenValue = "current-token",
+            revokeSessionResult = AppResult.Success(Unit)
+        )
+
+        val viewModel = AuthViewModel(repository)
+
+        viewModel.login(
+            email = "test@example.com",
+            password = "test-password"
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(
+            LoginUiState.Success,
+            viewModel.uiState.value
+        )
+
+        var callbackCalls = 0
+
+        viewModel.revokeSession(
+            token = "current-token"
+        ) {
+            callbackCalls++
+        }
+
+        advanceUntilIdle()
+
+        assertEquals(
+            1,
+            repository.revokeSessionCalls
+        )
+
+        assertEquals(
+            "current-token",
+            repository.lastRevokeSessionToken
+        )
+
+        assertEquals(
+            1,
+            repository.logoutCalls
+        )
+
+        assertEquals(
+            LoginUiState.Idle,
+            viewModel.uiState.value
+        )
+
+        assertEquals(
+            1,
+            callbackCalls
+        )
+    }
+
+    @Test
+    fun revokeSessionErrorDoesNotLogoutOrInvokeCallback() = runTest {
+        val repository = FakeAuthRepository(
+            currentTokenValue = "current-token",
+            revokeSessionResult = AppResult.Error(
+                NetworkError.SERVER_ERROR
+            )
+        )
+
+        val viewModel = AuthViewModel(repository)
+
+        var callbackCalls = 0
+
+        viewModel.revokeSession(
+            token = "current-token"
+        ) {
+            callbackCalls++
+        }
+
+        advanceUntilIdle()
+
+        assertEquals(
+            1,
+            repository.revokeSessionCalls
+        )
+
+        assertEquals(
+            "current-token",
+            repository.lastRevokeSessionToken
+        )
+
+        assertEquals(
+            0,
+            repository.logoutCalls
+        )
+
+        assertEquals(
+            0,
+            callbackCalls
+        )
+    }
+
     private class FakeAuthRepository(
         var loginResult: AppResult<Unit, AppError> =
             AppResult.Success(Unit),
@@ -734,9 +880,20 @@ class AuthViewModelTest {
             AppResult.Success(Unit),
 
         var syncActiveSessionsResult: AppResult<Unit, AppError> =
+            AppResult.Success(Unit),
+
+        var currentTokenValue: String? = null,
+
+        var revokeSessionResult: AppResult<Unit, AppError> =
             AppResult.Success(Unit)
 
     ) : AuthRepository {
+
+        var revokeSessionCalls: Int = 0
+            private set
+
+        var lastRevokeSessionToken: String? = null
+            private set
 
         var syncActiveSessionsCalls: Int = 0
             private set
@@ -816,7 +973,7 @@ class AuthViewModelTest {
             currentUserFlow
 
         override fun getCurrentToken(): String? =
-            null
+            currentTokenValue
 
         override fun observeActiveSessions():
                 Flow<List<ActiveSession>> =
@@ -884,8 +1041,12 @@ class AuthViewModelTest {
 
         override suspend fun revokeSession(
             token: String
-        ): AppResult<Unit, AppError> =
-            AppResult.Success(Unit)
+        ): AppResult<Unit, AppError> {
+            revokeSessionCalls++
+            lastRevokeSessionToken = token
+
+            return revokeSessionResult
+        }
 
         override suspend fun logout() {
             logoutCalls++
