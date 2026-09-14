@@ -20,6 +20,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import com.brunno.appkmp.domain.error.NetworkError
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AuthViewModelTest {
@@ -315,6 +316,83 @@ class AuthViewModelTest {
         )
     }
 
+    @Test
+    fun updateUserSuccessUpdatesUiState() = runTest {
+        val repository = FakeAuthRepository(
+            updateUserResult = AppResult.Success(Unit)
+        )
+
+        val viewModel = AuthViewModel(repository)
+
+        viewModel.updateUser(
+            name = "Updated Name"
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(
+            1,
+            repository.updateUserCalls
+        )
+
+        assertEquals(
+            "Updated Name",
+            repository.lastUpdateUserName
+        )
+
+        assertEquals(
+            LoginUiState.Success,
+            viewModel.uiState.value
+        )
+
+        assertEquals(
+            AutoLoginState.Idle,
+            viewModel.autoLoginState.value
+        )
+    }
+
+    @Test
+    fun updateUserErrorUpdatesUiState() = runTest {
+        val repository = FakeAuthRepository(
+            updateUserResult = AppResult.Error(
+                NetworkError.SERVER_ERROR
+            )
+        )
+
+        val viewModel = AuthViewModel(repository)
+
+        viewModel.updateUser(
+            name = "Updated Name"
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(
+            1,
+            repository.updateUserCalls
+        )
+
+        assertEquals(
+            "Updated Name",
+            repository.lastUpdateUserName
+        )
+
+        val state =
+            assertIs<LoginUiState.Error>(
+                viewModel.uiState.value
+            )
+
+        assertEquals(
+            NetworkError.SERVER_ERROR,
+            state.error
+        )
+
+        assertEquals(
+            AutoLoginState.Idle,
+            viewModel.autoLoginState.value
+        )
+    }
+
     private class FakeAuthRepository(
         var loginResult: AppResult<Unit, AppError> =
             AppResult.Success(Unit),
@@ -323,8 +401,17 @@ class AuthViewModelTest {
             AppResult.Success(Unit),
 
         var forgotPasswordResult: AppResult<Unit, AppError> =
+            AppResult.Success(Unit),
+
+        var updateUserResult: AppResult<Unit, AppError> =
             AppResult.Success(Unit)
     ) : AuthRepository {
+
+        var updateUserCalls: Int = 0
+            private set
+
+        var lastUpdateUserName: String? = null
+            private set
 
         var forgotPasswordCalls: Int = 0
             private set
@@ -416,8 +503,12 @@ class AuthViewModelTest {
 
         override suspend fun updateUser(
             name: String
-        ): AppResult<Unit, AppError> =
-            AppResult.Success(Unit)
+        ): AppResult<Unit, AppError> {
+            updateUserCalls++
+            lastUpdateUserName = name
+
+            return updateUserResult
+        }
 
         override suspend fun revokeSession(
             token: String
