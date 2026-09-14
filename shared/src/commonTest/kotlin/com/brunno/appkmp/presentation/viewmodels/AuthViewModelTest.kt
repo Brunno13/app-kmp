@@ -795,6 +795,11 @@ class AuthViewModelTest {
             viewModel.uiState.value
         )
 
+        assertEquals(
+            AutoLoginState.ProceedToHome,
+            viewModel.autoLoginState.value
+        )
+
         var callbackCalls = 0
 
         viewModel.revokeSession(
@@ -823,6 +828,11 @@ class AuthViewModelTest {
         assertEquals(
             LoginUiState.Idle,
             viewModel.uiState.value
+        )
+
+        assertEquals(
+            AutoLoginState.Idle,
+            viewModel.autoLoginState.value
         )
 
         assertEquals(

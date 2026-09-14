@@ -101,6 +101,7 @@ class AuthViewModel(
                     if (isCurrentSession) {
                         authRepository.logout()
                         resetState()
+                        resetAutoLoginState()
                         onCurrentSessionRevoked()
                     }
                 }
