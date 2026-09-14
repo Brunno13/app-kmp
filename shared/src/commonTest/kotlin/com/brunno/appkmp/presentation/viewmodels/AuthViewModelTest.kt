@@ -686,6 +686,34 @@ class AuthViewModelTest {
         )
     }
 
+    @Test
+    fun loadSessionsRequestsSessionSynchronization() = runTest {
+        val repository = FakeAuthRepository(
+            syncActiveSessionsResult = AppResult.Success(Unit)
+        )
+
+        val viewModel = AuthViewModel(repository)
+
+        viewModel.loadSessions()
+
+        advanceUntilIdle()
+
+        assertEquals(
+            1,
+            repository.syncActiveSessionsCalls
+        )
+
+        assertEquals(
+            LoginUiState.Idle,
+            viewModel.uiState.value
+        )
+
+        assertEquals(
+            AutoLoginState.Idle,
+            viewModel.autoLoginState.value
+        )
+    }
+
     private class FakeAuthRepository(
         var loginResult: AppResult<Unit, AppError> =
             AppResult.Success(Unit),
@@ -703,9 +731,15 @@ class AuthViewModelTest {
             AppResult.Success(Unit),
 
         var changePasswordResult: AppResult<Unit, AppError> =
+            AppResult.Success(Unit),
+
+        var syncActiveSessionsResult: AppResult<Unit, AppError> =
             AppResult.Success(Unit)
 
     ) : AuthRepository {
+
+        var syncActiveSessionsCalls: Int = 0
+            private set
 
         var syncAvatarCalls: Int = 0
             private set
@@ -789,8 +823,11 @@ class AuthViewModelTest {
             activeSessionsFlow
 
         override suspend fun syncActiveSessions():
-                AppResult<Unit, AppError> =
-            AppResult.Success(Unit)
+                AppResult<Unit, AppError> {
+            syncActiveSessionsCalls++
+
+            return syncActiveSessionsResult
+        }
 
         override suspend fun login(
             email: String,
