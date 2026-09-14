@@ -29,6 +29,10 @@ sealed interface AutoLoginState {
 class AuthViewModel(
     private val authRepository: AuthRepository
 ) : ViewModel() {
+    private val _sessionError = MutableStateFlow<AppError?>(null)
+
+    val sessionError = _sessionError.asStateFlow()
+
     private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
     val uiState = _uiState.asStateFlow()
 
@@ -89,15 +93,24 @@ class AuthViewModel(
 
     fun loadSessions() {
         viewModelScope.launch {
-            authRepository.syncActiveSessions()
+            when (val result = authRepository.syncActiveSessions()) {
+                is AppResult.Success -> {
+                    _sessionError.value = null
+                }
+
+                is AppResult.Error -> {
+                    _sessionError.value = result.error
+                }
+            }
         }
     }
 
     fun revokeSession(token: String, onCurrentSessionRevoked: () -> Unit) {
         viewModelScope.launch {
             val isCurrentSession = token == authRepository.getCurrentToken()
-            when (authRepository.revokeSession(token)) {
+            when (val result = authRepository.revokeSession(token)) {
                 is AppResult.Success -> {
+                    _sessionError.value = null
                     if (isCurrentSession) {
                         authRepository.logout()
                         resetState()
@@ -106,7 +119,10 @@ class AuthViewModel(
                         onCurrentSessionRevoked()
                     }
                 }
-                is AppResult.Error -> { /* Handle Error */ }
+
+                is AppResult.Error -> {
+                    _sessionError.value = result.error
+                }
             }
         }
     }

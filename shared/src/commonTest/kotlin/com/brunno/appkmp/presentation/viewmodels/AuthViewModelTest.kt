@@ -1238,6 +1238,73 @@ class AuthViewModelTest {
         )
     }
 
+    @Test
+    fun loadSessionsErrorIsExposedAsSessionError() = runTest {
+        val repository = FakeAuthRepository(
+            syncActiveSessionsResult = AppResult.Error(
+                NetworkError.SERVER_ERROR
+            )
+        )
+
+        val viewModel = AuthViewModel(repository)
+
+        viewModel.loadSessions()
+
+        advanceUntilIdle()
+
+        assertEquals(
+            NetworkError.SERVER_ERROR,
+            viewModel.sessionError.value
+        )
+
+        assertEquals(
+            LoginUiState.Idle,
+            viewModel.uiState.value
+        )
+    }
+
+    @Test
+    fun revokeSessionErrorIsExposedAsSessionError() = runTest {
+        val repository = FakeAuthRepository(
+            currentTokenValue = "current-token",
+            revokeSessionResult = AppResult.Error(
+                NetworkError.SERVER_ERROR
+            )
+        )
+
+        val viewModel = AuthViewModel(repository)
+
+        var callbackCalls = 0
+
+        viewModel.revokeSession(
+            token = "current-token"
+        ) {
+            callbackCalls++
+        }
+
+        advanceUntilIdle()
+
+        assertEquals(
+            NetworkError.SERVER_ERROR,
+            viewModel.sessionError.value
+        )
+
+        assertEquals(
+            LoginUiState.Idle,
+            viewModel.uiState.value
+        )
+
+        assertEquals(
+            0,
+            repository.logoutCalls
+        )
+
+        assertEquals(
+            0,
+            callbackCalls
+        )
+    }
+
     private class FakeAuthRepository(
         var loginResult: AppResult<Unit, AppError> =
             AppResult.Success(Unit),
