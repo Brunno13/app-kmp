@@ -77,7 +77,6 @@ steps:
           CHANGELOG=$$(git log --pretty=format:"- %h %s" "$$PREV_TAG..HEAD")
         fi
 
-      # RELEASE_BODY=$$(printf '🚀 Deploy automático multiplataforma Android e iOS (KMP) realizado nativamente pelo Apple Silicon M1.\n\n---\n\n%s' "$$CHANGELOG")
         RELEASE_BODY=$$(printf '🚀 Deploy automático Android/KMP realizado pelo CI self-hosted.\n\n---\n\n%s' "$$CHANGELOG")
         printf '%s\n' "$$RELEASE_BODY" > .release_body.txt
 
