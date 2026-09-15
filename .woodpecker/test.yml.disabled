@@ -41,7 +41,8 @@ steps:
       - echo "🧹 Verificando Formatação e Linter..."
       - ./scripts/lint.sh
 
-      - echo "🧪 Executando a suíte de testes (Comum, Android e iOS)..."
+#      - echo "🧪 Executando a suíte de testes (Comum, Android e iOS)..."
+      - echo "🧪 Executando a suíte de testes (Comum, Android)..."
       - ./scripts/test.sh
 
   # =========================================================
