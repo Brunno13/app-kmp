@@ -5,7 +5,13 @@ import com.brunno.appkmp.domain.error.AppError
 import com.brunno.appkmp.domain.error.AuthError
 import com.brunno.appkmp.domain.error.NetworkError
 import kmpprojectbrunno.shared.generated.resources.Res
-import kmpprojectbrunno.shared.generated.resources.*
+import kmpprojectbrunno.shared.generated.resources.error_invalid_credentials
+import kmpprojectbrunno.shared.generated.resources.error_invalid_password
+import kmpprojectbrunno.shared.generated.resources.error_no_internet
+import kmpprojectbrunno.shared.generated.resources.error_password_too_short
+import kmpprojectbrunno.shared.generated.resources.error_server
+import kmpprojectbrunno.shared.generated.resources.error_too_many_requests
+import kmpprojectbrunno.shared.generated.resources.error_unknown
 import org.jetbrains.compose.resources.stringResource
 
 @Composable

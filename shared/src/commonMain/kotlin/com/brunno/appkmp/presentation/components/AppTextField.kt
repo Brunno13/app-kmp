@@ -18,7 +18,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import kmpprojectbrunno.shared.generated.resources.*
+import kmpprojectbrunno.shared.generated.resources.Res
+import kmpprojectbrunno.shared.generated.resources.desc_hide_password
+import kmpprojectbrunno.shared.generated.resources.desc_show_password
 import org.jetbrains.compose.resources.stringResource
 
 @Composable

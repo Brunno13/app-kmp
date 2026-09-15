@@ -1,6 +1,18 @@
 package com.brunno.appkmp.data.remote
 
-import com.brunno.appkmp.data.remote.models.*
+import com.brunno.appkmp.data.remote.models.ActiveSession
+import com.brunno.appkmp.data.remote.models.AvatarUpdateRequest
+import com.brunno.appkmp.data.remote.models.AvatarUploadResponse
+import com.brunno.appkmp.data.remote.models.ChangePasswordRequest
+import com.brunno.appkmp.data.remote.models.ChangePasswordResponse
+import com.brunno.appkmp.data.remote.models.ForgotPasswordRequest
+import com.brunno.appkmp.data.remote.models.LoginRequest
+import com.brunno.appkmp.data.remote.models.LoginResponse
+import com.brunno.appkmp.data.remote.models.RegisterRequest
+import com.brunno.appkmp.data.remote.models.RevokeSessionRequest
+import com.brunno.appkmp.data.remote.models.RevokeSessionResponse
+import com.brunno.appkmp.data.remote.models.UpdateUserRequest
+import com.brunno.appkmp.data.remote.models.UpdateUserResponse
 import de.jensklingenberg.ktorfit.http.Body
 import de.jensklingenberg.ktorfit.http.GET
 import de.jensklingenberg.ktorfit.http.POST

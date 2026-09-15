@@ -6,7 +6,15 @@ import com.brunno.appkmp.data.local.UserEntity
 import com.brunno.appkmp.data.local.toDomain
 import com.brunno.appkmp.data.local.toEntity
 import com.brunno.appkmp.data.remote.AuthApi
-import com.brunno.appkmp.data.remote.models.*
+import com.brunno.appkmp.data.remote.models.ActiveSession
+import com.brunno.appkmp.data.remote.models.AvatarUpdateRequest
+import com.brunno.appkmp.data.remote.models.ChangePasswordRequest
+import com.brunno.appkmp.data.remote.models.ForgotPasswordRequest
+import com.brunno.appkmp.data.remote.models.LoginRequest
+import com.brunno.appkmp.data.remote.models.LoginResponse
+import com.brunno.appkmp.data.remote.models.RegisterRequest
+import com.brunno.appkmp.data.remote.models.RevokeSessionRequest
+import com.brunno.appkmp.data.remote.models.UpdateUserRequest
 import com.brunno.appkmp.data.remote.parseNetworkError
 import com.brunno.appkmp.domain.error.AppError
 import com.brunno.appkmp.domain.error.AppResult
