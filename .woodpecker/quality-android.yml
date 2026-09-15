@@ -12,6 +12,10 @@ steps:
   - name: android-quality
     image: ghcr.io/cirruslabs/android-sdk:35@sha256:54e4ef10f19c211052851736dfb783ee26935a089b06bb1f9019a311cdc38af0
 
+    environment:
+      ANDROID_HOME: /opt/android-sdk-linux
+      ANDROID_SDK_ROOT: /opt/android-sdk-linux
+
     commands:
       - |
         set -eu
