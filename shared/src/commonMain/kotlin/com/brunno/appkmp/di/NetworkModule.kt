@@ -18,6 +18,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
+import io.ktor.http.HttpStatusCode
 
 val networkModule = module {
 
@@ -56,10 +57,10 @@ val networkModule = module {
 
                 handleResponseExceptionWithRequest { exception, request ->
                     if (exception is ClientRequestException) {
-                        val status = exception.response.status.value
+                        val status = exception.response.status
                         println("❌ KTOR ERRO: ${request.url}")
                         println("❌ STATUS: $status")
-                        if (status == 401 || status == 403) {
+                        if (status == HttpStatusCode.Unauthorized || status == HttpStatusCode.Forbidden) {
                             println("🔒 Sessão expirada/inválida detetada no Ktor. Forçando logout local...")
                             settings.remove("auth_token")
                             userDao.clearSession()

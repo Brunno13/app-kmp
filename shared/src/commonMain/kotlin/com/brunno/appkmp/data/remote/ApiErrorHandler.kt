@@ -8,6 +8,8 @@ import io.ktor.client.plugins.ResponseException
 import io.ktor.client.statement.bodyAsText
 import io.ktor.utils.io.errors.IOException
 import kotlinx.serialization.json.Json
+import io.ktor.client.plugins.ServerResponseException
+import io.ktor.http.HttpStatusCode
 
 private val errorJsonParser = Json {
     ignoreUnknownKeys = true
@@ -19,7 +21,7 @@ suspend fun parseNetworkError(exception: Exception): AppError {
         is IOException -> NetworkError.NO_INTERNET
 
         is ResponseException -> {
-            val status = exception.response.status.value
+            val status = exception.response.status
 
             val errorBody = try {
                 exception.response.bodyAsText()
@@ -41,7 +43,7 @@ suspend fun parseNetworkError(exception: Exception): AppError {
                 "${apiError?.message} ${apiError?.error} ${apiError?.code}".uppercase()
 
             when (status) {
-                400 -> {
+                HttpStatusCode.BadRequest -> {
                     if (errorDetails.contains("INVALID_PASSWORD")) {
                         AuthError.INVALID_PASSWORD
                     } else if (errorDetails.contains("PASSWORD_TOO_SHORT") || errorDetails.contains("PASSWORD TOO SHORT")) {
@@ -50,18 +52,23 @@ suspend fun parseNetworkError(exception: Exception): AppError {
                         NetworkError.UNKNOWN
                     }
                 }
-                401 -> {
+                HttpStatusCode.Unauthorized -> {
                     if (errorDetails.contains("CREDENTIALS") || errorDetails.contains("PASSWORD")) {
                         AuthError.INVALID_CREDENTIALS
                     } else {
                         AuthError.UNAUTHORIZED
                     }
                 }
-                403 -> AuthError.UNAUTHORIZED
-                404 -> NetworkError.SERVER_ERROR
-                429 -> NetworkError.TOO_MANY_REQUESTS
-                in 500..599 -> NetworkError.SERVER_ERROR
-                else -> NetworkError.UNKNOWN
+                HttpStatusCode.Forbidden -> AuthError.UNAUTHORIZED
+                HttpStatusCode.NotFound -> NetworkError.SERVER_ERROR
+                HttpStatusCode.TooManyRequests -> NetworkError.TOO_MANY_REQUESTS
+                else -> {
+                    if (exception is ServerResponseException) {
+                        NetworkError.SERVER_ERROR
+                    } else {
+                        NetworkError.UNKNOWN
+                    }
+                }
             }
         }
         else -> NetworkError.UNKNOWN
