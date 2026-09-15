@@ -10,4 +10,5 @@ plugins {
     // Geradores de código
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.ktorfit) apply false
+    alias(libs.plugins.detekt) apply false
 }

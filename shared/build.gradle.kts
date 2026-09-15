@@ -16,6 +16,7 @@ plugins {
     alias(libs.plugins.ktorfit)
 
     id("jacoco")
+    alias(libs.plugins.detekt)
 }
 
 kotlin {
@@ -248,4 +249,26 @@ tasks.register<JacocoCoverageVerification>("jacocoBusinessCoverageVerification")
             }
         }
     }
+}
+
+tasks.register<io.gitlab.arturbosch.detekt.Detekt>("detektAuthoredCommonMain") {
+    group = "verification"
+    description = "Runs Detekt only on authored commonMain Kotlin sources."
+
+    setSource(
+        fileTree("src/commonMain/kotlin") {
+            include("**/*.kt")
+        }
+    )
+}
+
+tasks.register<io.gitlab.arturbosch.detekt.Detekt>("detektAuthoredAndroidMain") {
+    group = "verification"
+    description = "Runs Detekt only on authored androidMain Kotlin sources."
+
+    setSource(
+        fileTree("src/androidMain/kotlin") {
+            include("**/*.kt")
+        }
+    )
 }

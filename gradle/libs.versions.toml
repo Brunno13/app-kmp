@@ -27,6 +27,7 @@ multiplatformSettings = "1.1.1"
 securityCrypto = "1.1.0-alpha06"
 
 peekaboo = "0.5.2"
+detekt = "1.23.8"
 
 
 [libraries]
@@ -90,3 +91,4 @@ kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref =
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 ktorfit = { id = "de.jensklingenberg.ktorfit", version.ref = "ktorfit" }
 kotlinx-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
