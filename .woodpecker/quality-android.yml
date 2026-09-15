@@ -45,10 +45,10 @@ steps:
 
         echo
         echo "===== ANDROID SDK ====="
-        printf 'ANDROID_HOME=%s\n' "${ANDROID_HOME:-UNSET}"
-        printf 'ANDROID_SDK_ROOT=%s\n' "${ANDROID_SDK_ROOT:-UNSET}"
-        ls -d "${ANDROID_HOME}/platforms/android-35"
-        ls -d "${ANDROID_HOME}/build-tools/35.0.0"
+        printf 'ANDROID_HOME=%s\n' "$ANDROID_HOME"
+        printf 'ANDROID_SDK_ROOT=%s\n' "$ANDROID_SDK_ROOT"
+        ls -d "$ANDROID_HOME/platforms/android-35"
+        ls -d "$ANDROID_HOME/build-tools/35.0.0"
 
         echo
         echo "===== GRADLE ====="
