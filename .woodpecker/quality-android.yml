@@ -32,17 +32,45 @@ steps:
 
         echo
         echo "===== INSTALL JDK 17 - PROBE TEMPORARIO ====="
+
         export DEBIAN_FRONTEND=noninteractive
 
-        apt-get update -qq
+        set +e
 
+        echo
+        echo "===== APT UPDATE ====="
+        apt-get update
+        APT_UPDATE_RC=$?
+        echo "APT_UPDATE_RC=$APT_UPDATE_RC"
+
+        if [ "$APT_UPDATE_RC" -ne 0 ]; then
+          echo "ERRO: apt-get update falhou."
+          exit "$APT_UPDATE_RC"
+        fi
+
+        echo
+        echo "===== JDK 17 PACKAGE ====="
+        apt-cache policy openjdk-17-jdk-headless || true
+
+        echo
+        echo "===== APT INSTALL JDK 17 ====="
         apt-get install \
           -y \
           --no-install-recommends \
-          openjdk-17-jdk-headless \
-          >/dev/null
+          openjdk-17-jdk-headless
 
-        rm -rf /var/lib/apt/lists/*
+        APT_INSTALL_RC=$?
+        echo "APT_INSTALL_RC=$APT_INSTALL_RC"
+
+        if [ "$APT_INSTALL_RC" -ne 0 ]; then
+          echo "ERRO: instalacao do JDK 17 falhou."
+          exit "$APT_INSTALL_RC"
+        fi
+
+        set -e
+
+        echo
+        echo "===== JDK 17 INSTALL COMPLETE ====="
 
         echo
         echo "===== INSTALLED JDKS ====="
