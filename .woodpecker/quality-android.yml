@@ -10,7 +10,7 @@ depends_on:
 
 steps:
   - name: android-quality
-    image: app-kmp-android-ci:35-jdk17-v1
+    image: app-kmp-android-ci:35-jdk17-v2
     pull: false
 
     environment:
