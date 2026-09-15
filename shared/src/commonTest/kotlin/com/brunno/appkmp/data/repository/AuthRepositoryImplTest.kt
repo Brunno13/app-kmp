@@ -33,6 +33,8 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import com.brunno.appkmp.domain.error.NetworkError
 import kotlinx.coroutines.flow.first
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class AuthRepositoryImplTest {
 
@@ -968,6 +970,65 @@ class AuthRepositoryImplTest {
         )
     }
 
+    @Test
+    fun loginReturnsNetworkErrorWhenRemoteRequestFails() = runTest {
+        val fixture = createFixture(
+            loginFailure = IllegalStateException("Remote failure")
+        )
+
+        val result = fixture.repository.login(
+            email = "user@example.com",
+            password = "password"
+        )
+
+        assertEquals(
+            AppResult.Error(NetworkError.UNKNOWN),
+            result
+        )
+
+        assertNull(
+            fixture.repository.getCurrentToken()
+        )
+    }
+
+    @Test
+    fun registerReturnsNetworkErrorWhenRemoteRequestFails() = runTest {
+        val fixture = createFixture(
+            registerFailure = IllegalStateException("Remote failure")
+        )
+
+        val result = fixture.repository.register(
+            name = "User",
+            email = "user@example.com",
+            password = "password"
+        )
+
+        assertEquals(
+            AppResult.Error(NetworkError.UNKNOWN),
+            result
+        )
+
+        assertNull(
+            fixture.repository.getCurrentToken()
+        )
+    }
+
+    @Test
+    fun updateUserReturnsNetworkErrorWhenRemoteRequestFails() = runTest {
+        val fixture = createFixture(
+            updateUserFailure = IllegalStateException("Remote failure")
+        )
+
+        val result = fixture.repository.updateUser(
+            name = "Updated User"
+        )
+
+        assertEquals(
+            AppResult.Error(NetworkError.UNKNOWN),
+            result
+        )
+    }
+
     private fun createFixture(
         settings: MapSettings = MapSettings(),
         loginResponse: LoginResponse = LoginResponse(),
@@ -988,11 +1049,15 @@ class AuthRepositoryImplTest {
 
         updateUserFailure: Exception? = null,
         getAvatarResponse: ByteArray = byteArrayOf(),
-        getAvatarFailure: Exception? = null
+        getAvatarFailure: Exception? = null,
+        loginFailure: Exception? = null,
+        registerFailure: Exception? = null,
     ): Fixture {
         val api = FakeAuthApi(
             loginResponse = loginResponse,
+            loginFailure = loginFailure,
             registerResponse = registerResponse,
+            registerFailure = registerFailure,
             logoutFailure = logoutFailure,
             sessionsResponse = sessionsResponse,
             listSessionsFailure = listSessionsFailure,
@@ -1037,12 +1102,14 @@ class AuthRepositoryImplTest {
 
     private class FakeAuthApi(
         var loginResponse: LoginResponse,
+        var loginFailure: Exception? = null,
         var logoutFailure: Exception? = null,
         var sessionsResponse: List<ActiveSession> = emptyList(),
         var listSessionsFailure: Exception? = null,
         var revokeSessionFailure: Exception? = null,
         var updateUserResponse: UpdateUserResponse = UpdateUserResponse(),
         var registerResponse: LoginResponse = LoginResponse(),
+        var registerFailure: Exception? = null,
         var forgotPasswordFailure: Exception? = null,
         var changePasswordFailure: Exception? = null,
         var uploadAvatarResponse: AvatarUploadResponse,
@@ -1103,6 +1170,9 @@ class AuthRepositoryImplTest {
             request: LoginRequest
         ): LoginResponse {
             lastLoginRequest = request
+            loginFailure?.let {
+                throw it
+            }
             return loginResponse
         }
 
@@ -1110,6 +1180,9 @@ class AuthRepositoryImplTest {
             request: RegisterRequest
         ): LoginResponse {
             lastRegisterRequest = request
+            registerFailure?.let {
+                throw it
+            }
             return registerResponse
         }
 
