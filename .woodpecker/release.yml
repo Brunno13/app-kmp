@@ -48,12 +48,6 @@ steps:
       - echo "🤖 Compilando o APK Android de Produção..."
       - ./scripts/build_android.sh
 
-    # iOS temporariamente desabilitado durante a migração dos
-    # testes/quality gates Linux/Android para a VM104.
-    #
-    #      - echo "🍎 Compilando o pacote iOS de Produção..."
-    #      - ./scripts/build_ios.sh
-
   # =========================================================
   # FASE 2: RELEASE NO GITEA
   # =========================================================
@@ -180,13 +174,6 @@ steps:
           -H "Authorization: Bearer $$GITHUB_TOKEN" \
           -H "Content-Type: application/vnd.android.package-archive" \
           --data-binary "@./app-kmp-production.apk"
-
-      # iOS temporariamente desabilitado.
-      #
-      # curl -fsS -X POST "$$GH_UPLOAD_URL?name=app-kmp-ios-production.zip" \
-      #    -H "Authorization: Bearer $$GITHUB_TOKEN" \
-      #    -H "Content-Type: application/zip" \
-      #    --data-binary "@./app-kmp-ios-production.zip"
 
         echo "✅ RELEASE NO GITHUB CRIADA COM SUCESSO!"
 
