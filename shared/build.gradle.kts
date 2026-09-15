@@ -1,3 +1,5 @@
+import org.gradle.testing.jacoco.plugins.JacocoPluginExtension
+
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidMultiplatformLibrary)
@@ -11,7 +13,7 @@ plugins {
 
     alias(libs.plugins.ktorfit)
 
-    alias(libs.plugins.kover)
+    id("jacoco")
 }
 
 kotlin {
@@ -116,4 +118,8 @@ dependencies {
 
 ksp {
     arg("room.generateKotlin", "true")
+}
+
+extensions.configure<JacocoPluginExtension> {
+    toolVersion = "0.8.14"
 }
