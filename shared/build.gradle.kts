@@ -111,6 +111,13 @@ kotlin {
     }
 }
 
+detekt {
+    buildUponDefaultConfig = true
+    config.setFrom(
+        rootProject.file("config/detekt/detekt.yml")
+    )
+}
+
 dependencies {
     androidRuntimeClasspath(libs.compose.uiTooling)
 
@@ -255,6 +262,12 @@ tasks.register<io.gitlab.arturbosch.detekt.Detekt>("detektAuthoredCommonMain") {
     group = "verification"
     description = "Runs Detekt only on authored commonMain Kotlin sources."
 
+    buildUponDefaultConfig = true
+
+    config.setFrom(
+        rootProject.file("config/detekt/detekt.yml")
+    )
+
     setSource(
         fileTree("src/commonMain/kotlin") {
             include("**/*.kt")
@@ -265,6 +278,12 @@ tasks.register<io.gitlab.arturbosch.detekt.Detekt>("detektAuthoredCommonMain") {
 tasks.register<io.gitlab.arturbosch.detekt.Detekt>("detektAuthoredAndroidMain") {
     group = "verification"
     description = "Runs Detekt only on authored androidMain Kotlin sources."
+
+    buildUponDefaultConfig = true
+
+    config.setFrom(
+        rootProject.file("config/detekt/detekt.yml")
+    )
 
     setSource(
         fileTree("src/androidMain/kotlin") {
