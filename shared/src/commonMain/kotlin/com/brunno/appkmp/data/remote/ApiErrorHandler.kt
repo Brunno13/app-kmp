@@ -46,7 +46,10 @@ suspend fun parseNetworkError(exception: Exception): AppError {
                 HttpStatusCode.BadRequest -> {
                     if (errorDetails.contains("INVALID_PASSWORD")) {
                         AuthError.INVALID_PASSWORD
-                    } else if (errorDetails.contains("PASSWORD_TOO_SHORT") || errorDetails.contains("PASSWORD TOO SHORT")) {
+                    } else if (
+                        errorDetails.contains("PASSWORD_TOO_SHORT") ||
+                        errorDetails.contains("PASSWORD TOO SHORT")
+                    ) {
                         AuthError.PASSWORD_TOO_SHORT
                     } else {
                         NetworkError.UNKNOWN

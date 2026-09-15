@@ -161,9 +161,17 @@ fun ProfileScreen(
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                MenuCard(title = stringResource(Res.string.menu_edit_profile), icon = Icons.Default.Edit, onClick = onNavigateToEditProfile)
+                MenuCard(
+                    title = stringResource(Res.string.menu_edit_profile),
+                    icon = Icons.Default.Edit,
+                    onClick = onNavigateToEditProfile
+                )
                 Spacer(modifier = Modifier.height(12.dp))
-                MenuCard(title = stringResource(Res.string.menu_security), icon = Icons.Default.Security, onClick = onNavigateToSecurity)
+                MenuCard(
+                    title = stringResource(Res.string.menu_security),
+                    icon = Icons.Default.Security,
+                    onClick = onNavigateToSecurity
+                )
                 Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedCard(
@@ -174,9 +182,17 @@ fun ProfileScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Brightness4, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+                            Icon(
+                                Icons.Default.Brightness4,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
                             Spacer(modifier = Modifier.width(16.dp))
-                            Text(text = stringResource(Res.string.title_app_theme), fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                            Text(
+                                text = stringResource(Res.string.title_app_theme),
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

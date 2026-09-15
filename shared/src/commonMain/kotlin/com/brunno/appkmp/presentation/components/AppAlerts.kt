@@ -163,7 +163,10 @@ fun AppModal(
     onDismiss: () -> Unit
 ) {
     val (primaryColor, icon) = when (type) {
-        AlertType.SUCCESS -> Pair(if (isDark) ToastSuccessBorderDark else ToastSuccessBorderLight, Icons.Rounded.CheckCircle)
+        AlertType.SUCCESS -> Pair(
+            if (isDark) ToastSuccessBorderDark else ToastSuccessBorderLight,
+            Icons.Rounded.CheckCircle
+        )
         AlertType.ERROR -> Pair(if (isDark) ToastErrorBorderDark else ToastErrorBorderLight, Icons.Rounded.Cancel)
         AlertType.INFO -> Pair(if (isDark) ToastInfoBorderDark else ToastInfoBorderLight, Icons.Rounded.Info)
     }

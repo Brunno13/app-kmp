@@ -208,7 +208,12 @@ fun EditProfileScreen(
                         viewModel.updateUser(name)
                     }
                 },
-                enabled = ((name.isNotBlank() && name != currentUser?.name) || selectedBase64 != null) && uiState !is LoginUiState.Loading,
+                enabled =
+                    (
+                        (name.isNotBlank() && name != currentUser?.name) ||
+                                selectedBase64 != null
+                        ) &&
+                        uiState !is LoginUiState.Loading,
                 modifier = Modifier.fillMaxWidth().height(MaterialTheme.dimens.buttonHeight),
                 shape = MaterialTheme.shapes.medium
             ) {
@@ -269,7 +274,12 @@ fun EditProfileScreen(
 
                     ListItem(
                         headlineContent = { Text(stringResource(Res.string.action_take_photo)) },
-                        leadingContent = { Icon(Icons.Default.CameraAlt, contentDescription = stringResource(Res.string.desc_camera)) },
+                        leadingContent = {
+                            Icon(
+                                Icons.Default.CameraAlt,
+                                contentDescription = stringResource(Res.string.desc_camera)
+                            )
+                        },
                         modifier = Modifier.clickable {
                             showImageSourceSheet = false
                             cameraPicker.launch()
@@ -279,7 +289,12 @@ fun EditProfileScreen(
 
                     ListItem(
                         headlineContent = { Text(stringResource(Res.string.action_choose_from_gallery)) },
-                        leadingContent = { Icon(Icons.Default.PhotoLibrary, contentDescription = stringResource(Res.string.desc_gallery)) },
+                        leadingContent = {
+                            Icon(
+                                Icons.Default.PhotoLibrary,
+                                contentDescription = stringResource(Res.string.desc_gallery)
+                            )
+                        },
                         modifier = Modifier.clickable {
                             showImageSourceSheet = false
                             singleImagePicker.launch()

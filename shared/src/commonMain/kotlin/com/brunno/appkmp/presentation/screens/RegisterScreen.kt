@@ -118,7 +118,11 @@ fun RegisterScreen(
                 Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
             }
 
-            val isFormValid = fullName.isNotBlank() && email.isNotBlank() && password.isNotBlank() && password == confirmPassword
+            val isFormValid =
+                fullName.isNotBlank() &&
+                        email.isNotBlank() &&
+                        password.isNotBlank() &&
+                        password == confirmPassword
             val isLoading = uiState is LoginUiState.Loading
 
             Button(

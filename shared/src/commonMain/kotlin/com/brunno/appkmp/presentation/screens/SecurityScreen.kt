@@ -214,7 +214,10 @@ fun SecurityScreen(
                     text = stringResource(Res.string.warning_biometric),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(top = MaterialTheme.dimens.spaceSmall, start = MaterialTheme.dimens.spaceSmall)
+                    modifier = Modifier.padding(
+                        top = MaterialTheme.dimens.spaceSmall,
+                        start = MaterialTheme.dimens.spaceSmall
+                    )
                 )
 
                 Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceExtraLarge))
