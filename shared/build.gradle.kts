@@ -1,3 +1,4 @@
+import org.gradle.testing.jacoco.tasks.JacocoReport
 import org.gradle.testing.jacoco.plugins.JacocoPluginExtension
 
 plugins {
@@ -122,4 +123,36 @@ ksp {
 
 extensions.configure<JacocoPluginExtension> {
     toolVersion = "0.8.14"
+}
+
+tasks.register<JacocoReport>("jacocoAndroidHostTestReport") {
+    group = "verification"
+    description = "Generates JaCoCo coverage report for Android host tests."
+
+    dependsOn("testAndroidHostTest")
+
+    executionData(
+        layout.buildDirectory.file(
+            "jacoco/testAndroidHostTest.exec"
+        )
+    )
+
+    classDirectories.setFrom(
+        layout.buildDirectory.dir(
+            "classes/kotlin/android/main"
+        )
+    )
+
+    sourceDirectories.setFrom(
+        files(
+            "src/commonMain/kotlin",
+            "src/androidMain/kotlin"
+        )
+    )
+
+    reports {
+        html.required.set(true)
+        xml.required.set(true)
+        csv.required.set(true)
+    }
 }
