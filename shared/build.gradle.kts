@@ -1,3 +1,4 @@
+import org.gradle.testing.jacoco.tasks.JacocoCoverageVerification
 import org.gradle.testing.jacoco.tasks.JacocoReport
 import org.gradle.testing.jacoco.plugins.JacocoPluginExtension
 
@@ -192,5 +193,59 @@ tasks.register<JacocoReport>("jacocoBusinessCoverageReport") {
         html.required.set(true)
         xml.required.set(true)
         csv.required.set(true)
+    }
+}
+
+tasks.register<JacocoCoverageVerification>("jacocoBusinessCoverageVerification") {
+    group = "verification"
+    description = "Verifies JaCoCo coverage thresholds for business logic."
+
+    dependsOn("testAndroidHostTest")
+
+    executionData(
+        layout.buildDirectory.file(
+            "jacoco/testAndroidHostTest.exec"
+        )
+    )
+
+    classDirectories.setFrom(
+        fileTree("build/classes/kotlin/android/main") {
+            include(
+                "com/brunno/appkmp/data/repository/**",
+                "com/brunno/appkmp/data/remote/ApiErrorHandlerKt*",
+                "com/brunno/appkmp/presentation/viewmodels/**",
+                "com/brunno/appkmp/domain/error/**",
+                "com/brunno/appkmp/domain/enums/**"
+            )
+        }
+    )
+
+    sourceDirectories.setFrom(
+        files(
+            "src/commonMain/kotlin",
+            "src/androidMain/kotlin"
+        )
+    )
+
+    violationRules {
+        rule {
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = "0.95".toBigDecimal()
+            }
+
+            limit {
+                counter = "BRANCH"
+                value = "COVEREDRATIO"
+                minimum = "0.80".toBigDecimal()
+            }
+
+            limit {
+                counter = "METHOD"
+                value = "COVEREDRATIO"
+                minimum = "0.90".toBigDecimal()
+            }
+        }
     }
 }
