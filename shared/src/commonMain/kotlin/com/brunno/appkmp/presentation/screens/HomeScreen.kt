@@ -25,6 +25,8 @@ import kmpprojectbrunno.shared.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
+
+private const val TOAST_DISPLAY_DURATION_MILLIS = 3_000L
 @Composable
 fun HomeScreen(
     onNavigateToHome: () -> Unit,
@@ -40,7 +42,7 @@ fun HomeScreen(
 
     LaunchedEffect(showToast) {
         if (showToast) {
-            delay(3000)
+            delay(timeMillis = TOAST_DISPLAY_DURATION_MILLIS)
             showToast = false
         }
     }

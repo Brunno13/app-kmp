@@ -1,6 +1,12 @@
 package com.brunno.appkmp.presentation.screens
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -8,10 +14,22 @@ import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import com.brunno.appkmp.presentation.components.AppTextField
@@ -22,11 +40,34 @@ import com.brunno.appkmp.presentation.utils.asString
 import com.brunno.appkmp.presentation.utils.rememberBiometricManager
 import com.brunno.appkmp.presentation.viewmodels.AuthViewModel
 import com.brunno.appkmp.presentation.viewmodels.LoginUiState
-import kmpprojectbrunno.shared.generated.resources.*
+import kmpprojectbrunno.shared.generated.resources.Res
+import kmpprojectbrunno.shared.generated.resources.action_revoke_session
+import kmpprojectbrunno.shared.generated.resources.action_update_password
+import kmpprojectbrunno.shared.generated.resources.desc_biometric_unlock
+import kmpprojectbrunno.shared.generated.resources.empty_sessions_desc
+import kmpprojectbrunno.shared.generated.resources.empty_sessions_title
+import kmpprojectbrunno.shared.generated.resources.label_unknown
+import kmpprojectbrunno.shared.generated.resources.label_unknown_device
+import kmpprojectbrunno.shared.generated.resources.msg_invalid_current_password
+import kmpprojectbrunno.shared.generated.resources.msg_password_updated
+import kmpprojectbrunno.shared.generated.resources.placeholder_current_password
+import kmpprojectbrunno.shared.generated.resources.placeholder_new_password
+import kmpprojectbrunno.shared.generated.resources.subtitle_disable_biometric
+import kmpprojectbrunno.shared.generated.resources.subtitle_enable_biometric
+import kmpprojectbrunno.shared.generated.resources.title_active_sessions
+import kmpprojectbrunno.shared.generated.resources.title_biometric
+import kmpprojectbrunno.shared.generated.resources.title_biometric_unlock
+import kmpprojectbrunno.shared.generated.resources.title_change_password
+import kmpprojectbrunno.shared.generated.resources.title_confirm_action
+import kmpprojectbrunno.shared.generated.resources.title_security
+import kmpprojectbrunno.shared.generated.resources.warning_biometric
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import kotlinx.coroutines.delay
 
+
+private const val USER_AGENT_DISPLAY_MAX_LENGTH = 30
+private const val SUCCESS_MESSAGE_DURATION_MILLIS = 3_000L
 @Composable
 fun SecurityScreen(
     onBack: () -> Unit,
@@ -57,7 +98,7 @@ fun SecurityScreen(
             showSuccessMessage = true
             viewModel.resetState()
 
-            delay(3000)
+            delay(timeMillis = SUCCESS_MESSAGE_DURATION_MILLIS)
             showSuccessMessage = false
         }
     }
@@ -129,7 +170,7 @@ fun SecurityScreen(
                 Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceSmall))
                 Text(
                     text = stringResource(Res.string.msg_password_updated),
-                    color = Color(0xFF4CAF50),
+                    color = MaterialTheme.colorScheme.tertiary,
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
@@ -209,7 +250,7 @@ fun SecurityScreen(
                     val unknownIpText = stringResource(Res.string.label_unknown)
 
                     MenuCard(
-                        title = session.userAgent?.take(30) ?: unknownDeviceText,
+                        title = session.userAgent?.take(USER_AGENT_DISPLAY_MAX_LENGTH) ?: unknownDeviceText,
                         subtitle = "IP: ${session.ipAddress ?: unknownIpText}",
                         icon = Icons.Default.Computer,
                         trailingContent = {

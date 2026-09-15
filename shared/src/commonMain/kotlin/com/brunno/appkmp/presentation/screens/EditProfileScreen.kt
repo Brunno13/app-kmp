@@ -3,14 +3,38 @@ package com.brunno.appkmp.presentation.screens
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,13 +54,30 @@ import com.brunno.appkmp.presentation.viewmodels.AuthViewModel
 import com.brunno.appkmp.presentation.viewmodels.LoginUiState
 import com.preat.peekaboo.image.picker.SelectionMode
 import com.preat.peekaboo.image.picker.rememberImagePickerLauncher
-import kmpprojectbrunno.shared.generated.resources.*
+import kmpprojectbrunno.shared.generated.resources.Res
+import kmpprojectbrunno.shared.generated.resources.action_change_photo
+import kmpprojectbrunno.shared.generated.resources.action_choose_from_gallery
+import kmpprojectbrunno.shared.generated.resources.action_save_changes
+import kmpprojectbrunno.shared.generated.resources.action_take_photo
+import kmpprojectbrunno.shared.generated.resources.desc_camera
+import kmpprojectbrunno.shared.generated.resources.desc_edit_profile_photo
+import kmpprojectbrunno.shared.generated.resources.desc_gallery
+import kmpprojectbrunno.shared.generated.resources.modal_error_title
+import kmpprojectbrunno.shared.generated.resources.modal_success_profile_update
+import kmpprojectbrunno.shared.generated.resources.modal_success_title
+import kmpprojectbrunno.shared.generated.resources.placeholder_full_name
+import kmpprojectbrunno.shared.generated.resources.title_change_profile_picture
+import kmpprojectbrunno.shared.generated.resources.title_edit_profile
+import kmpprojectbrunno.shared.generated.resources.title_update_profile
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.random.Random
 
+
+private const val PROFILE_IMAGE_SUFFIX_MIN = 10_000
+private const val PROFILE_IMAGE_SUFFIX_MAX_EXCLUSIVE = 99_999
 @OptIn(ExperimentalEncodingApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
@@ -58,7 +99,11 @@ fun EditProfileScreen(
         onResult = { byteArrays ->
             byteArrays.firstOrNull()?.let { bytes ->
                 selectedBase64 = Base64.encode(bytes)
-                selectedFileName = "profile_gallery_${Random.nextInt(10000, 99999)}.jpg"
+                val fileSuffix = Random.nextInt(
+                    PROFILE_IMAGE_SUFFIX_MIN,
+                    PROFILE_IMAGE_SUFFIX_MAX_EXCLUSIVE
+                )
+                selectedFileName = "profile_gallery_$fileSuffix.jpg"
                 selectedMimeType = "image/jpeg"
             }
         }
@@ -67,7 +112,11 @@ fun EditProfileScreen(
     val cameraPicker = rememberCameraLauncher { bytes ->
         if (bytes != null) {
             selectedBase64 = Base64.encode(bytes)
-            selectedFileName = "profile_camera_${Random.nextInt(10000, 99999)}.jpg"
+            val fileSuffix = Random.nextInt(
+                PROFILE_IMAGE_SUFFIX_MIN,
+                PROFILE_IMAGE_SUFFIX_MAX_EXCLUSIVE
+            )
+            selectedFileName = "profile_camera_$fileSuffix.jpg"
             selectedMimeType = "image/jpeg"
         }
     }
@@ -117,7 +166,7 @@ fun EditProfileScreen(
                 Button(
                     onClick = { showImageSourceSheet = true },
                     modifier = Modifier.offset(y = 12.dp).height(32.dp),
-                    shape = RoundedCornerShape(50),
+                    shape = CircleShape,
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {

@@ -26,6 +26,8 @@ sealed interface AutoLoginState {
     data object BiometricsRevoked : AutoLoginState
 }
 
+private const val WHILE_SUBSCRIBED_STOP_TIMEOUT_MILLIS = 5_000L
+
 class AuthViewModel(
     private val authRepository: AuthRepository
 ) : ViewModel() {
@@ -47,14 +49,14 @@ class AuthViewModel(
     val currentUser = authRepository.observeCurrentUser()
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = WHILE_SUBSCRIBED_STOP_TIMEOUT_MILLIS),
             initialValue = null
         )
 
     val activeSessions = authRepository.observeActiveSessions()
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.WhileSubscribed(stopTimeoutMillis = WHILE_SUBSCRIBED_STOP_TIMEOUT_MILLIS),
             initialValue = emptyList()
         )
 
