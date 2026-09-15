@@ -156,3 +156,41 @@ tasks.register<JacocoReport>("jacocoAndroidHostTestReport") {
         csv.required.set(true)
     }
 }
+
+tasks.register<JacocoReport>("jacocoBusinessCoverageReport") {
+    group = "verification"
+    description = "Generates JaCoCo coverage report for business logic."
+
+    dependsOn("testAndroidHostTest")
+
+    executionData(
+        layout.buildDirectory.file(
+            "jacoco/testAndroidHostTest.exec"
+        )
+    )
+
+    classDirectories.setFrom(
+        fileTree("build/classes/kotlin/android/main") {
+            include(
+                "com/brunno/appkmp/data/repository/**",
+                "com/brunno/appkmp/data/remote/ApiErrorHandlerKt*",
+                "com/brunno/appkmp/presentation/viewmodels/**",
+                "com/brunno/appkmp/domain/error/**",
+                "com/brunno/appkmp/domain/enums/**"
+            )
+        }
+    )
+
+    sourceDirectories.setFrom(
+        files(
+            "src/commonMain/kotlin",
+            "src/androidMain/kotlin"
+        )
+    )
+
+    reports {
+        html.required.set(true)
+        xml.required.set(true)
+        csv.required.set(true)
+    }
+}
