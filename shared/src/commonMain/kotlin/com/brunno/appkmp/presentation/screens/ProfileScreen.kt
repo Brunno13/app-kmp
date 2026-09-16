@@ -1,11 +1,9 @@
 package com.brunno.appkmp.presentation.screens
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,10 +11,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Brightness4
@@ -42,8 +38,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -52,9 +46,13 @@ import com.brunno.appkmp.domain.enums.ThemeMode
 import com.brunno.appkmp.presentation.components.AppBottomBar
 import com.brunno.appkmp.presentation.components.AppButton
 import com.brunno.appkmp.presentation.components.MenuCard
+import com.brunno.appkmp.presentation.components.MenuCardWithTrailingContent
+import com.brunno.appkmp.presentation.components.ProfileAvatar
+import com.brunno.appkmp.presentation.navigation.ProfileNavigationActions
 import com.brunno.appkmp.presentation.navigation.Routes
 import com.brunno.appkmp.presentation.utils.decodeBase64ToImageBitmap
 import com.brunno.appkmp.presentation.viewmodels.AuthViewModel
+import com.brunno.appkmp.presentation.viewmodels.ProfileViewModel
 import com.brunno.appkmp.presentation.viewmodels.ThemeViewModel
 import kmpprojectbrunno.shared.generated.resources.Res
 import kmpprojectbrunno.shared.generated.resources.action_sign_out
@@ -68,10 +66,6 @@ import kmpprojectbrunno.shared.generated.resources.title_app_theme
 import kmpprojectbrunno.shared.generated.resources.title_offline_mode
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import androidx.compose.foundation.layout.ColumnScope
-import com.brunno.appkmp.presentation.navigation.ProfileNavigationActions
-import com.brunno.appkmp.presentation.components.MenuCardWithTrailingContent
-import com.brunno.appkmp.presentation.viewmodels.ProfileViewModel
 
 private data class ProfileUiState(
     val userName: String?,
@@ -177,28 +171,11 @@ private fun ProfileHeader(
     ) {
         Spacer(modifier = Modifier.height(40.dp))
 
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center
-        ) {
-            if (avatarBitmap != null) {
-                Image(
-                    bitmap = avatarBitmap,
-                    contentDescription = "Profile Photo",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Text(
-                    text = userName?.take(1)?.uppercase() ?: "",
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
+        ProfileAvatar(
+            bitmap = avatarBitmap,
+            userName = userName,
+            contentDescription = "Profile Photo"
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 

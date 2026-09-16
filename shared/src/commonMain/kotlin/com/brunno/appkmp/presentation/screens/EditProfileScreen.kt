@@ -1,7 +1,5 @@
 package com.brunno.appkmp.presentation.screens
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,9 +35,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,6 +43,7 @@ import com.brunno.appkmp.presentation.components.AlertType
 import com.brunno.appkmp.presentation.components.AppModal
 import com.brunno.appkmp.presentation.components.AppTextField
 import com.brunno.appkmp.presentation.components.AppTopBar
+import com.brunno.appkmp.presentation.components.ProfileAvatar
 import com.brunno.appkmp.presentation.theme.dimens
 import com.brunno.appkmp.presentation.utils.asString
 import com.brunno.appkmp.presentation.utils.decodeBase64ToImageBitmap
@@ -175,28 +172,13 @@ private fun ProfilePhotoSection(
     }
 
     Box(contentAlignment = Alignment.BottomCenter) {
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center
-        ) {
-            if (bitmapToDisplay != null) {
-                Image(
-                    bitmap = bitmapToDisplay,
-                    contentDescription = stringResource(Res.string.desc_edit_profile_photo),
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Text(
-                    text = userName?.take(1)?.uppercase() ?: "",
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
+        ProfileAvatar(
+            bitmap = bitmapToDisplay,
+            userName = userName,
+            contentDescription = stringResource(
+                Res.string.desc_edit_profile_photo
+            )
+        )
 
         Button(
             onClick = onChangePhotoClick,
