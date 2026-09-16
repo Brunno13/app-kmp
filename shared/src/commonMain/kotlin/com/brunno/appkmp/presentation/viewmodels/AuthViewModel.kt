@@ -96,32 +96,11 @@ class AuthViewModel(
         email: String,
         password: String
     ) {
-        viewModelScope.launch {
-            _uiState.value =
-                LoginUiState.Loading
-
-            when (
-                val result =
-                    authRepository.login(
-                        email = email,
-                        password = password
-                    )
-            ) {
-                is AppResult.Success -> {
-                    _uiState.value =
-                        LoginUiState.Success
-
-                    _autoLoginState.value =
-                        AutoLoginState.ProceedToHome
-                }
-
-                is AppResult.Error -> {
-                    _uiState.value =
-                        LoginUiState.Error(
-                            result.error
-                        )
-                }
-            }
+        launchAuthentication {
+            authRepository.login(
+                email = email,
+                password = password
+            )
         }
     }
 
@@ -130,33 +109,12 @@ class AuthViewModel(
         email: String,
         password: String
     ) {
-        viewModelScope.launch {
-            _uiState.value =
-                LoginUiState.Loading
-
-            when (
-                val result =
-                    authRepository.register(
-                        name = name,
-                        email = email,
-                        password = password
-                    )
-            ) {
-                is AppResult.Success -> {
-                    _uiState.value =
-                        LoginUiState.Success
-
-                    _autoLoginState.value =
-                        AutoLoginState.ProceedToHome
-                }
-
-                is AppResult.Error -> {
-                    _uiState.value =
-                        LoginUiState.Error(
-                            result.error
-                        )
-                }
-            }
+        launchAuthentication {
+            authRepository.register(
+                name = name,
+                email = email,
+                password = password
+            )
         }
     }
 
@@ -204,5 +162,26 @@ class AuthViewModel(
     fun resetState() {
         _uiState.value =
             LoginUiState.Idle
+    }
+
+    private fun launchAuthentication(
+        authenticate: suspend () -> AppResult<Unit, AppError>
+    ) {
+        viewModelScope.launch {
+            _uiState.value = LoginUiState.Loading
+
+            when (val result = authenticate()) {
+                is AppResult.Success -> {
+                    _uiState.value = LoginUiState.Success
+                    _autoLoginState.value = AutoLoginState.ProceedToHome
+                }
+
+                is AppResult.Error -> {
+                    _uiState.value = LoginUiState.Error(
+                        result.error
+                    )
+                }
+            }
+        }
     }
 }
