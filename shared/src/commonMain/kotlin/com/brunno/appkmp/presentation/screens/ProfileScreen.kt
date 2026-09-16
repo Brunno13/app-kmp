@@ -68,13 +68,20 @@ import kmpprojectbrunno.shared.generated.resources.title_app_theme
 import kmpprojectbrunno.shared.generated.resources.title_offline_mode
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import androidx.compose.foundation.layout.ColumnScope
+import com.brunno.appkmp.presentation.navigation.ProfileNavigationActions
+
+private data class ProfileUiState(
+    val userName: String?,
+    val userEmail: String?,
+    val avatarData: String?,
+    val themeMode: ThemeMode,
+    val offlineMode: Boolean
+)
 
 @Composable
 fun ProfileScreen(
-    onNavigateToHome: () -> Unit,
-    onNavigateToProfile: () -> Unit,
-    onNavigateToEditProfile: () -> Unit,
-    onNavigateToSecurity: () -> Unit,
+    navigation: ProfileNavigationActions,
     onLogoutSuccess: () -> Unit,
     authViewModel: AuthViewModel = koinViewModel(),
     themeViewModel: ThemeViewModel = koinViewModel()
@@ -87,17 +94,40 @@ fun ProfileScreen(
         authViewModel.syncAvatarIfNeeded(currentUser?.avatarFilename)
     }
 
-    val avatarBitmap = remember(currentUser?.avatarData) {
-        currentUser?.avatarData?.let { decodeBase64ToImageBitmap(it) }
-    }
+    ProfileContent(
+        state = ProfileUiState(
+            userName = currentUser?.name,
+            userEmail = currentUser?.email,
+            avatarData = currentUser?.avatarData,
+            themeMode = themeMode,
+            offlineMode = offlineMode
+        ),
+        navigation = navigation,
+        onThemeChange = { themeViewModel.setTheme(it) },
+        onOfflineModeChange = { offlineMode = it },
+        onLogout = {
+            authViewModel.logout {
+                onLogoutSuccess()
+            }
+        }
+    )
+}
 
+@Composable
+private fun ProfileContent(
+    state: ProfileUiState,
+    navigation: ProfileNavigationActions,
+    onThemeChange: (ThemeMode) -> Unit,
+    onOfflineModeChange: (Boolean) -> Unit,
+    onLogout: () -> Unit
+) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             AppBottomBar(
                 currentRoute = Routes.PROFILE,
-                onNavigateToHome = onNavigateToHome,
-                onNavigateToProfile = onNavigateToProfile
+                onNavigateToHome = navigation.onNavigateToHome,
+                onNavigateToProfile = navigation.onNavigateToProfile
             )
         }
     ) { paddingValues ->
@@ -107,162 +137,271 @@ fun ProfileScreen(
                 .padding(paddingValues),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            ProfileHeader(
+                userName = state.userName,
+                userEmail = state.userEmail,
+                avatarData = state.avatarData
+            )
+
+            ProfileSettings(
+                state = state,
+                navigation = navigation,
+                onThemeChange = onThemeChange,
+                onOfflineModeChange = onOfflineModeChange,
+                onLogout = onLogout
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProfileHeader(
+    userName: String?,
+    userEmail: String?,
+    avatarData: String?
+) {
+    val avatarBitmap = remember(avatarData) {
+        avatarData?.let { decodeBase64ToImageBitmap(it) }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(40.dp))
+
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
+            if (avatarBitmap != null) {
+                Image(
+                    bitmap = avatarBitmap,
+                    contentDescription = "Profile Photo",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Text(
+                    text = userName?.take(1)?.uppercase() ?: "",
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = userName ?: "...",
+            style = MaterialTheme.typography.headlineSmall.copy(
+                fontWeight = FontWeight.Bold
+            ),
+            color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = userEmail ?: "...",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyLarge
+        )
+
+        Spacer(modifier = Modifier.height(40.dp))
+    }
+}
+
+@Composable
+private fun ColumnScope.ProfileSettings(
+    state: ProfileUiState,
+    navigation: ProfileNavigationActions,
+    onThemeChange: (ThemeMode) -> Unit,
+    onOfflineModeChange: (Boolean) -> Unit,
+    onLogout: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .weight(1f)
+            .padding(horizontal = 24.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        MenuCard(
+            title = stringResource(Res.string.menu_edit_profile),
+            icon = Icons.Default.Edit,
+            onClick = navigation.onNavigateToEditProfile
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        MenuCard(
+            title = stringResource(Res.string.menu_security),
+            icon = Icons.Default.Security,
+            onClick = navigation.onNavigateToSecurity
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        ProfileThemeCard(
+            themeMode = state.themeMode,
+            onThemeChange = onThemeChange
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        ProfileOfflineMode(
+            offlineMode = state.offlineMode,
+            onOfflineModeChange = onOfflineModeChange
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        AppButton(
+            text = stringResource(Res.string.action_sign_out),
+            onClick = onLogout,
+            containerColor = MaterialTheme.colorScheme.error,
+            contentColor = MaterialTheme.colorScheme.onError
+        )
+
+        Spacer(modifier = Modifier.height(48.dp))
+    }
+}
+
+@Composable
+private fun ProfileThemeCard(
+    themeMode: ThemeMode,
+    onThemeChange: (ThemeMode) -> Unit
+) {
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Spacer(modifier = Modifier.height(40.dp))
-                Box(
-                    modifier = Modifier
-                        .size(120.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (avatarBitmap != null) {
-                        Image(
-                            bitmap = avatarBitmap,
-                            contentDescription = "Profile Photo",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Text(
-                            text = currentUser?.name?.take(1)?.uppercase() ?: "",
-                            style = MaterialTheme.typography.headlineLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
+                Icon(
+                    imageVector = Icons.Default.Brightness4,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.width(16.dp))
 
                 Text(
-                    text = currentUser?.name ?: "...",
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onBackground,
-                    textAlign = TextAlign.Center
+                    text = stringResource(Res.string.title_app_theme),
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = currentUser?.email ?: "...",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Spacer(modifier = Modifier.height(40.dp))
             }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(horizontal = 24.dp)
-                    .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                MenuCard(
-                    title = stringResource(Res.string.menu_edit_profile),
-                    icon = Icons.Default.Edit,
-                    onClick = onNavigateToEditProfile
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                MenuCard(
-                    title = stringResource(Res.string.menu_security),
-                    icon = Icons.Default.Security,
-                    onClick = onNavigateToSecurity
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-
-                OutlinedCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.medium,
-                    colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.Brightness4,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Text(
-                                text = stringResource(Res.string.title_app_theme),
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            ThemeOptionButton(
-                                text = stringResource(Res.string.theme_light).uppercase(),
-                                isSelected = themeMode == ThemeMode.LIGHT,
-                                onClick = { themeViewModel.setTheme(ThemeMode.LIGHT) },
-                                modifier = Modifier.weight(1f)
-                            )
-                            ThemeOptionButton(
-                                text = stringResource(Res.string.theme_dark).uppercase(),
-                                isSelected = themeMode == ThemeMode.DARK,
-                                onClick = { themeViewModel.setTheme(ThemeMode.DARK) },
-                                modifier = Modifier.weight(1f)
-                            )
-                            ThemeOptionButton(
-                                text = stringResource(Res.string.theme_auto).uppercase(),
-                                isSelected = themeMode == ThemeMode.AUTO,
-                                onClick = { themeViewModel.setTheme(ThemeMode.AUTO) },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                MenuCard(
-                    title = stringResource(Res.string.title_offline_mode),
-                    icon = Icons.Default.Wifi,
-                    subtitle = stringResource(Res.string.desc_offline_mode),
-                    trailingContent = { Switch(checked = offlineMode, onCheckedChange = { offlineMode = it }) }
+                ThemeOptionButton(
+                    text = stringResource(Res.string.theme_light).uppercase(),
+                    isSelected = themeMode == ThemeMode.LIGHT,
+                    onClick = { onThemeChange(ThemeMode.LIGHT) },
+                    modifier = Modifier.weight(1f)
                 )
 
-                Spacer(modifier = Modifier.height(32.dp))
-
-                AppButton(
-                    text = stringResource(Res.string.action_sign_out),
-                    onClick = {
-                        authViewModel.logout {
-                            onLogoutSuccess()
-                        }
-                    },
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError
+                ThemeOptionButton(
+                    text = stringResource(Res.string.theme_dark).uppercase(),
+                    isSelected = themeMode == ThemeMode.DARK,
+                    onClick = { onThemeChange(ThemeMode.DARK) },
+                    modifier = Modifier.weight(1f)
                 )
-                Spacer(modifier = Modifier.height(48.dp))
+
+                ThemeOptionButton(
+                    text = stringResource(Res.string.theme_auto).uppercase(),
+                    isSelected = themeMode == ThemeMode.AUTO,
+                    onClick = { onThemeChange(ThemeMode.AUTO) },
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
     }
 }
 
 @Composable
-fun ThemeOptionButton(text: String, isSelected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun ProfileOfflineMode(
+    offlineMode: Boolean,
+    onOfflineModeChange: (Boolean) -> Unit
+) {
+    MenuCard(
+        title = stringResource(Res.string.title_offline_mode),
+        icon = Icons.Default.Wifi,
+        subtitle = stringResource(Res.string.desc_offline_mode),
+        trailingContent = {
+            Switch(
+                checked = offlineMode,
+                onCheckedChange = onOfflineModeChange
+            )
+        }
+    )
+}
+
+@Composable
+fun ThemeOptionButton(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     if (isSelected) {
         Button(
             onClick = onClick,
             modifier = modifier.height(40.dp),
             shape = MaterialTheme.shapes.small,
             contentPadding = PaddingValues(0.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-        ) { Text(text, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary) }
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary
+            )
+        ) {
+            Text(
+                text = text,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+        }
     } else {
         OutlinedButton(
             onClick = onClick,
             modifier = modifier.height(40.dp),
             shape = MaterialTheme.shapes.small,
             contentPadding = PaddingValues(0.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
-        ) { Text(text, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+            border = BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.outlineVariant
+            ),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.onSurface
+            )
+        ) {
+            Text(
+                text = text,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp
+            )
+        }
     }
 }
