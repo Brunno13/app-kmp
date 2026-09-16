@@ -99,22 +99,10 @@ private fun NavGraphBuilder.homeRoute(
     composable(Routes.HOME) {
         HomeScreen(
             onNavigateToHome = {
-                navController.navigate(Routes.HOME) {
-                    popUpTo(Routes.HOME) {
-                        saveState = true
-                    }
-                    launchSingleTop = true
-                    restoreState = true
-                }
+                navController.navigateTopLevel(Routes.HOME)
             },
             onNavigateToProfile = {
-                navController.navigate(Routes.PROFILE) {
-                    popUpTo(Routes.HOME) {
-                        saveState = true
-                    }
-                    launchSingleTop = true
-                    restoreState = true
-                }
+                navController.navigateTopLevel(Routes.PROFILE)
             }
         )
     }
@@ -128,18 +116,10 @@ private fun NavGraphBuilder.profileRoutes(
         ProfileScreen(
             navigation = ProfileNavigationActions(
                 onNavigateToHome = {
-                    navController.navigate(Routes.HOME) {
-                        popUpTo(Routes.HOME) {saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
+                    navController.navigateTopLevel(Routes.HOME)
                 },
                 onNavigateToProfile = {
-                    navController.navigate(Routes.PROFILE) {
-                        popUpTo(Routes.HOME) {saveState = true}
-                        launchSingleTop = true
-                        restoreState = true
-                    }
+                    navController.navigateTopLevel(Routes.PROFILE)
                 },
                 onNavigateToEditProfile = {
                     navController.navigate(Routes.EDIT_PROFILE)
@@ -186,5 +166,17 @@ private fun NavGraphBuilder.detailsRoute(
                 navController.popBackStack()
             }
         )
+    }
+}
+
+private fun NavHostController.navigateTopLevel(
+    route: String
+) {
+    navigate(route) {
+        popUpTo(Routes.HOME) {
+            saveState = true
+        }
+        launchSingleTop = true
+        restoreState = true
     }
 }
