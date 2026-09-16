@@ -7,11 +7,20 @@ import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 @OptIn(ExperimentalEncodingApi::class)
-actual fun decodeBase64ToImageBitmap(base64Str: String): ImageBitmap? {
-    return try {
-        val bytes = Base64.decode(base64Str)
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size).asImageBitmap()
-    } catch (e: Exception) {
-        null
+actual fun decodeBase64ToImageBitmap(
+    base64Str: String
+): ImageBitmap? {
+    val bytes = try {
+        Base64.decode(base64Str)
+    } catch (_: IllegalArgumentException) {
+        return null
     }
+
+    return BitmapFactory
+        .decodeByteArray(
+            bytes,
+            0,
+            bytes.size
+        )
+        ?.asImageBitmap()
 }

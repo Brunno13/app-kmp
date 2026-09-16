@@ -11,8 +11,16 @@ import androidx.fragment.app.FragmentActivity
 actual class BiometricManager(private val activity: FragmentActivity) {
 
     actual fun isBiometricAvailable(): Boolean {
-        val biometricManager = AndroidBiometricManager.from(activity)
-        return biometricManager.canAuthenticate(AndroidBiometricManager.Authenticators.BIOMETRIC_STRONG) == AndroidBiometricManager.BIOMETRIC_SUCCESS
+        val biometricManager =
+            AndroidBiometricManager.from(activity)
+
+        val authenticationResult =
+            biometricManager.canAuthenticate(
+                AndroidBiometricManager.Authenticators.BIOMETRIC_STRONG
+            )
+
+        return authenticationResult ==
+                AndroidBiometricManager.BIOMETRIC_SUCCESS
     }
 
     actual fun promptBiometricAuth(
