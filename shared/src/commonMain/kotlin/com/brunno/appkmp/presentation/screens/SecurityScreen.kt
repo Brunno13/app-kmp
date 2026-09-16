@@ -40,7 +40,8 @@ import com.brunno.appkmp.presentation.theme.dimens
 import com.brunno.appkmp.presentation.utils.asString
 import com.brunno.appkmp.presentation.utils.rememberBiometricManager
 import com.brunno.appkmp.presentation.viewmodels.AuthViewModel
-import com.brunno.appkmp.presentation.viewmodels.LoginUiState
+import com.brunno.appkmp.presentation.viewmodels.SecurityActionState
+import com.brunno.appkmp.presentation.viewmodels.SecurityViewModel
 import kmpprojectbrunno.shared.generated.resources.Res
 import kmpprojectbrunno.shared.generated.resources.action_revoke_session
 import kmpprojectbrunno.shared.generated.resources.action_update_password
@@ -74,7 +75,8 @@ private const val SUCCESS_MESSAGE_DURATION_MILLIS = 3_000L
 fun SecurityScreen(
     onBack: () -> Unit,
     onLogoutSuccess: () -> Unit,
-    viewModel: AuthViewModel = koinViewModel()
+    viewModel: SecurityViewModel = koinViewModel(),
+    authViewModel: AuthViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val activeSessions by viewModel.activeSessions.collectAsState()
@@ -121,7 +123,9 @@ fun SecurityScreen(
                 sessionErrorText = sessionError?.asString(),
                 onRevokeSession = { token ->
                     viewModel.revokeSession(token) {
-                        onLogoutSuccess()
+                        authViewModel.logout {
+                            onLogoutSuccess()
+                        }
                     }
                 }
             )
@@ -133,7 +137,7 @@ fun SecurityScreen(
 
 @Composable
 private fun PasswordSection(
-    uiState: LoginUiState,
+    uiState: SecurityActionState,
     onChangePassword: (String, String) -> Unit,
     onResetState: () -> Unit
 ) {
@@ -142,7 +146,7 @@ private fun PasswordSection(
     var showSuccessMessage by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState) {
-        if (uiState is LoginUiState.Success) {
+        if (uiState is SecurityActionState.Success) {
             currentPassword = ""
             newPassword = ""
             showSuccessMessage = true
@@ -170,13 +174,13 @@ private fun PasswordSection(
         },
         enabled = currentPassword.isNotBlank() &&
                 newPassword.isNotBlank() &&
-                uiState !is LoginUiState.Loading,
+                uiState !is SecurityActionState.Loading,
         modifier = Modifier
             .fillMaxWidth()
             .height(MaterialTheme.dimens.buttonHeight),
         shape = MaterialTheme.shapes.medium
     ) {
-        if (uiState is LoginUiState.Loading) {
+        if (uiState is SecurityActionState.Loading) {
             CircularProgressIndicator(
                 modifier = Modifier.size(MaterialTheme.dimens.spaceLarge),
                 color = MaterialTheme.colorScheme.onPrimary
@@ -228,9 +232,9 @@ private fun PasswordFields(
 
 @Composable
 private fun PasswordErrorMessage(
-    uiState: LoginUiState
+    uiState: SecurityActionState
 ) {
-    if (uiState is LoginUiState.Error) {
+    if (uiState is SecurityActionState.Error) {
         val mappedError = uiState.error.asString()
         val isAuthError = mappedError.contains("email", ignoreCase = true)
 

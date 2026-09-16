@@ -15,6 +15,10 @@ import org.koin.core.module.dsl.viewModelOf
 import org.koin.core.qualifier.named
 import org.koin.dsl.KoinAppDeclaration
 import org.koin.dsl.module
+import com.brunno.appkmp.domain.repository.ProfileRepository
+import com.brunno.appkmp.domain.repository.SecurityRepository
+import com.brunno.appkmp.presentation.viewmodels.ProfileViewModel
+import com.brunno.appkmp.presentation.viewmodels.SecurityViewModel
 
 val appModule = module {
     single {
@@ -37,9 +41,19 @@ val appModule = module {
         )
     }
 
+    single<ProfileRepository> {
+        get<AuthRepository>()
+    }
+
+    single<SecurityRepository> {
+        get<AuthRepository>()
+    }
+
     single { GlobalErrorHandler() }
 
     viewModelOf(::AuthViewModel)
+    viewModelOf(::ProfileViewModel)
+    viewModelOf(::SecurityViewModel)
     viewModelOf(::ThemeViewModel)
 }
 

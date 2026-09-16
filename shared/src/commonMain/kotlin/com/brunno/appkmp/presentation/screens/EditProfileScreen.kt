@@ -51,8 +51,8 @@ import com.brunno.appkmp.presentation.theme.dimens
 import com.brunno.appkmp.presentation.utils.asString
 import com.brunno.appkmp.presentation.utils.decodeBase64ToImageBitmap
 import com.brunno.appkmp.presentation.utils.rememberCameraLauncher
-import com.brunno.appkmp.presentation.viewmodels.AuthViewModel
-import com.brunno.appkmp.presentation.viewmodels.LoginUiState
+import com.brunno.appkmp.presentation.viewmodels.ProfileActionState
+import com.brunno.appkmp.presentation.viewmodels.ProfileViewModel
 import com.preat.peekaboo.image.picker.SelectionMode
 import com.preat.peekaboo.image.picker.rememberImagePickerLauncher
 import kmpprojectbrunno.shared.generated.resources.Res
@@ -96,7 +96,7 @@ private class ProfileImagePickerActions(
 @Composable
 fun EditProfileScreen(
     onBack: () -> Unit,
-    viewModel: AuthViewModel = koinViewModel()
+    viewModel: ProfileViewModel = koinViewModel()
 ) {
     val currentUser by viewModel.currentUser.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
@@ -126,7 +126,7 @@ fun EditProfileScreen(
                 name = name,
                 onNameChange = { name = it },
                 hasChanges = hasChanges,
-                isLoading = uiState is LoginUiState.Loading,
+                isLoading = uiState is ProfileActionState.Loading,
                 onSave = {
                     submitProfileChanges(
                         viewModel = viewModel,
@@ -286,12 +286,12 @@ private fun EditProfileFormSection(
 
 @Composable
 private fun EditProfileResultModal(
-    uiState: LoginUiState,
+    uiState: ProfileActionState,
     onSuccessDismiss: () -> Unit,
     onErrorDismiss: () -> Unit
 ) {
     when (uiState) {
-        is LoginUiState.Success -> {
+        is ProfileActionState.Success -> {
             AppModal(
                 title = stringResource(
                     Res.string.modal_success_title
@@ -304,7 +304,7 @@ private fun EditProfileResultModal(
             )
         }
 
-        is LoginUiState.Error -> {
+        is ProfileActionState.Error -> {
             AppModal(
                 title = stringResource(
                     Res.string.modal_error_title
@@ -508,7 +508,7 @@ private fun EditProfileContent(
 }
 
 private fun submitProfileChanges(
-    viewModel: AuthViewModel,
+    viewModel: ProfileViewModel,
     selectedImage: SelectedProfileImage?,
     hasNameChanged: Boolean,
     name: String
