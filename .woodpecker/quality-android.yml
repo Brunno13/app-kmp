@@ -93,7 +93,7 @@ steps:
             "$XML" \
             | tail -n 1
         done
-        
+
         echo
         echo "===== DETEKT AUTHORED COMMON MAIN ====="
 
@@ -154,36 +154,35 @@ steps:
         echo "DETEKT_ANDROID_FINDINGS=$ANDROID_FINDINGS"
 
         echo
-        echo "===== DETEKT DIAGNOSTIC SUMMARY ====="
-
-        if [ "$DETEKT_COMMON_RC" -eq 0 ]; then
-          echo "DETEKT_COMMON=PASS"
-        else
-          echo "DETEKT_COMMON=FAIL"
-        fi
-
-        if [ "$DETEKT_ANDROID_RC" -eq 0 ]; then
-          echo "DETEKT_ANDROID=PASS"
-        else
-          echo "DETEKT_ANDROID=FAIL"
-        fi
-
-        echo
         echo "===== QUALITY SUMMARY ====="
 
         echo "UNIT_TESTS=PASS"
         echo "BUSINESS_COVERAGE=PASS"
 
-        if [ "$DETEKT_COMMON_RC" -eq 0 ]; then
+        DETEKT_GATE="PASS"
+
+        if [ "$DETEKT_COMMON_RC" -eq 0 ] &&
+           [ "$COMMON_FINDINGS" -eq 0 ]; then
           echo "DETEKT_COMMON=PASS"
         else
-          echo "DETEKT_COMMON=DIAGNOSTIC_FAIL"
+          echo "DETEKT_COMMON=FAIL"
+          DETEKT_GATE="FAIL"
         fi
 
-        if [ "$DETEKT_ANDROID_RC" -eq 0 ]; then
+        if [ "$DETEKT_ANDROID_RC" -eq 0 ] &&
+           [ "$ANDROID_FINDINGS" -eq 0 ]; then
           echo "DETEKT_ANDROID=PASS"
         else
-          echo "DETEKT_ANDROID=DIAGNOSTIC_FAIL"
+          echo "DETEKT_ANDROID=FAIL"
+          DETEKT_GATE="FAIL"
+        fi
+
+        echo "DETEKT_GATE=$DETEKT_GATE"
+
+        if [ "$DETEKT_GATE" != "PASS" ]; then
+          echo
+          echo "ANDROID_QUALITY_GATE=FAIL"
+          exit 1
         fi
 
         echo
