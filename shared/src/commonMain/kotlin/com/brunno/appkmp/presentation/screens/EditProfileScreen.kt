@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -78,6 +79,19 @@ import kotlin.random.Random
 
 private const val PROFILE_IMAGE_SUFFIX_MIN = 10_000
 private const val PROFILE_IMAGE_SUFFIX_MAX_EXCLUSIVE = 99_999
+
+private data class SelectedProfileImage(
+    val base64: String,
+    val fileName: String,
+    val mimeType: String
+)
+
+private class ProfileImagePickerActions(
+    val launchCamera: () -> Unit,
+    val launchGallery: () -> Unit
+)
+
+
 @OptIn(ExperimentalEncodingApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
@@ -86,191 +100,66 @@ fun EditProfileScreen(
 ) {
     val currentUser by viewModel.currentUser.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
-    val scope = rememberCoroutineScope()
     var name by remember(currentUser) { mutableStateOf(currentUser?.name ?: "") }
-    var selectedBase64 by remember { mutableStateOf<String?>(null) }
-    var selectedFileName by remember { mutableStateOf<String?>(null) }
-    var selectedMimeType by remember { mutableStateOf<String?>(null) }
+    var selectedImage by remember { mutableStateOf<SelectedProfileImage?>(null) }
     var showImageSourceSheet by remember { mutableStateOf(false) }
 
-    val singleImagePicker = rememberImagePickerLauncher(
-        selectionMode = SelectionMode.Single,
-        scope = scope,
-        onResult = { byteArrays ->
-            byteArrays.firstOrNull()?.let { bytes ->
-                selectedBase64 = Base64.encode(bytes)
-                val fileSuffix = Random.nextInt(
-                    PROFILE_IMAGE_SUFFIX_MIN,
-                    PROFILE_IMAGE_SUFFIX_MAX_EXCLUSIVE
-                )
-                selectedFileName = "profile_gallery_$fileSuffix.jpg"
-                selectedMimeType = "image/jpeg"
-            }
+    val imagePickerActions = rememberProfileImagePickerActions(
+        onImageSelected = { selectedImage = it }
+    )
+
+    val hasNameChanged = name.isNotBlank() && name != currentUser?.name
+    val hasChanges = hasNameChanged || selectedImage != null
+
+    EditProfileContent(
+        onBack = onBack,
+        photoContent = {
+            ProfilePhotoSection(
+                selectedBase64 = selectedImage?.base64,
+                avatarData = currentUser?.avatarData,
+                userName = currentUser?.name,
+                onChangePhotoClick = { showImageSourceSheet = true }
+            )
+        },
+        formContent = {
+            EditProfileFormSection(
+                name = name,
+                onNameChange = { name = it },
+                hasChanges = hasChanges,
+                isLoading = uiState is LoginUiState.Loading,
+                onSave = {
+                    submitProfileChanges(
+                        viewModel = viewModel,
+                        selectedImage = selectedImage,
+                        hasNameChanged = hasNameChanged,
+                        name = name
+                    )
+                }
+            )
         }
     )
 
-    val cameraPicker = rememberCameraLauncher { bytes ->
-        if (bytes != null) {
-            selectedBase64 = Base64.encode(bytes)
-            val fileSuffix = Random.nextInt(
-                PROFILE_IMAGE_SUFFIX_MIN,
-                PROFILE_IMAGE_SUFFIX_MAX_EXCLUSIVE
-            )
-            selectedFileName = "profile_camera_$fileSuffix.jpg"
-            selectedMimeType = "image/jpeg"
+    EditProfileResultModal(
+        uiState = uiState,
+        onSuccessDismiss = {
+            viewModel.resetState()
+            onBack()
+        },
+        onErrorDismiss = viewModel::resetState
+    )
+
+    ImageSourceSheet(
+        visible = showImageSourceSheet,
+        onDismiss = { showImageSourceSheet = false },
+        onTakePhoto = {
+            showImageSourceSheet = false
+            imagePickerActions.launchCamera()
+        },
+        onChooseFromGallery = {
+            showImageSourceSheet = false
+            imagePickerActions.launchGallery()
         }
-    }
-
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = { AppTopBar(title = stringResource(Res.string.title_edit_profile), onBackClick = onBack) }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = MaterialTheme.dimens.screenPadding),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceExtraLarge))
-
-            ProfilePhotoSection(
-                selectedBase64 = selectedBase64,
-                avatarData = currentUser?.avatarData,
-                userName = currentUser?.name,
-                onChangePhotoClick = {
-                    showImageSourceSheet = true
-                }
-            )
-
-            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceXXL))
-
-            Text(
-                text = stringResource(Res.string.title_update_profile),
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onBackground
-            )
-
-            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceLarge))
-
-            AppTextField(
-                value = name,
-                onValueChange = { name = it },
-                placeholder = stringResource(Res.string.placeholder_full_name)
-            )
-
-            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceLarge))
-
-            Button(
-                onClick = {
-                    if (selectedBase64 != null && selectedFileName != null && selectedMimeType != null) {
-                        viewModel.updateAvatar(selectedBase64!!, selectedFileName!!, selectedMimeType!!)
-                        if (name.isNotBlank() && name != currentUser?.name) {
-                            viewModel.updateUser(name)
-                        }
-                    } else if (name.isNotBlank() && name != currentUser?.name) {
-                        viewModel.updateUser(name)
-                    }
-                },
-                enabled =
-                    (
-                        (name.isNotBlank() && name != currentUser?.name) ||
-                                selectedBase64 != null
-                        ) &&
-                        uiState !is LoginUiState.Loading,
-                modifier = Modifier.fillMaxWidth().height(MaterialTheme.dimens.buttonHeight),
-                shape = MaterialTheme.shapes.medium
-            ) {
-                if (uiState is LoginUiState.Loading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(MaterialTheme.dimens.spaceLarge),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Text(text = stringResource(Res.string.action_save_changes), fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-
-        // Modais de Resultado
-        when (val state = uiState) {
-            is LoginUiState.Success -> {
-                AppModal(
-                    title = stringResource(Res.string.modal_success_title),
-                    message = stringResource(Res.string.modal_success_profile_update),
-                    type = AlertType.SUCCESS,
-                    onDismiss = {
-                        viewModel.resetState()
-                        onBack()
-                    }
-                )
-            }
-            is LoginUiState.Error -> {
-                AppModal(
-                    title = stringResource(Res.string.modal_error_title),
-                    message = state.error.asString(),
-                    type = AlertType.ERROR,
-                    onDismiss = {
-                        viewModel.resetState()
-                    }
-                )
-            }
-            else -> {}
-        }
-
-        if (showImageSourceSheet) {
-            ModalBottomSheet(
-                onDismissRequest = { showImageSourceSheet = false },
-                containerColor = MaterialTheme.colorScheme.surface
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 16.dp)
-                ) {
-                    Text(
-                        text = stringResource(Res.string.title_change_profile_picture),
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-
-                    ListItem(
-                        headlineContent = { Text(stringResource(Res.string.action_take_photo)) },
-                        leadingContent = {
-                            Icon(
-                                Icons.Default.CameraAlt,
-                                contentDescription = stringResource(Res.string.desc_camera)
-                            )
-                        },
-                        modifier = Modifier.clickable {
-                            showImageSourceSheet = false
-                            cameraPicker.launch()
-                        },
-                        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
-                    )
-
-                    ListItem(
-                        headlineContent = { Text(stringResource(Res.string.action_choose_from_gallery)) },
-                        leadingContent = {
-                            Icon(
-                                Icons.Default.PhotoLibrary,
-                                contentDescription = stringResource(Res.string.desc_gallery)
-                            )
-                        },
-                        modifier = Modifier.clickable {
-                            showImageSourceSheet = false
-                            singleImagePicker.launch()
-                        },
-                        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
-                    )
-
-                    Spacer(modifier = Modifier.height(32.dp))
-                }
-            }
-        }
-    }
+    )
 }
 
 @Composable
@@ -285,9 +174,7 @@ private fun ProfilePhotoSection(
         base64ToUse?.let { decodeBase64ToImageBitmap(it) }
     }
 
-    Box(
-        contentAlignment = Alignment.BottomCenter
-    ) {
+    Box(contentAlignment = Alignment.BottomCenter) {
         Box(
             modifier = Modifier
                 .size(120.dp)
@@ -298,9 +185,7 @@ private fun ProfilePhotoSection(
             if (bitmapToDisplay != null) {
                 Image(
                     bitmap = bitmapToDisplay,
-                    contentDescription = stringResource(
-                        Res.string.desc_edit_profile_photo
-                    ),
+                    contentDescription = stringResource(Res.string.desc_edit_profile_photo),
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
@@ -315,14 +200,9 @@ private fun ProfilePhotoSection(
 
         Button(
             onClick = onChangePhotoClick,
-            modifier = Modifier
-                .offset(y = 12.dp)
-                .height(32.dp),
+            modifier = Modifier.offset(y = 12.dp).height(32.dp),
             shape = CircleShape,
-            contentPadding = PaddingValues(
-                horizontal = 16.dp,
-                vertical = 0.dp
-            ),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary
             )
@@ -334,5 +214,314 @@ private fun ProfilePhotoSection(
                 color = MaterialTheme.colorScheme.onPrimary
             )
         }
+    }
+}
+
+
+@Composable
+private fun EditProfileFormSection(
+    name: String,
+    onNameChange: (String) -> Unit,
+    hasChanges: Boolean,
+    isLoading: Boolean,
+    onSave: () -> Unit
+) {
+    Text(
+        text = stringResource(
+            Res.string.title_update_profile
+        ),
+        style = MaterialTheme.typography.titleLarge.copy(
+            fontWeight = FontWeight.Bold
+        ),
+        color = MaterialTheme.colorScheme.onBackground
+    )
+
+    Spacer(
+        modifier = Modifier.height(
+            MaterialTheme.dimens.spaceLarge
+        )
+    )
+
+    AppTextField(
+        value = name,
+        onValueChange = onNameChange,
+        placeholder = stringResource(
+            Res.string.placeholder_full_name
+        )
+    )
+
+    Spacer(
+        modifier = Modifier.height(
+            MaterialTheme.dimens.spaceLarge
+        )
+    )
+
+    Button(
+        onClick = onSave,
+        enabled = hasChanges && !isLoading,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(MaterialTheme.dimens.buttonHeight),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(
+                    MaterialTheme.dimens.spaceLarge
+                ),
+                color = MaterialTheme.colorScheme.onPrimary,
+                strokeWidth = 2.dp
+            )
+        } else {
+            Text(
+                text = stringResource(
+                    Res.string.action_save_changes
+                ),
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+
+@Composable
+private fun EditProfileResultModal(
+    uiState: LoginUiState,
+    onSuccessDismiss: () -> Unit,
+    onErrorDismiss: () -> Unit
+) {
+    when (uiState) {
+        is LoginUiState.Success -> {
+            AppModal(
+                title = stringResource(
+                    Res.string.modal_success_title
+                ),
+                message = stringResource(
+                    Res.string.modal_success_profile_update
+                ),
+                type = AlertType.SUCCESS,
+                onDismiss = onSuccessDismiss
+            )
+        }
+
+        is LoginUiState.Error -> {
+            AppModal(
+                title = stringResource(
+                    Res.string.modal_error_title
+                ),
+                message = uiState.error.asString(),
+                type = AlertType.ERROR,
+                onDismiss = onErrorDismiss
+            )
+        }
+
+        else -> Unit
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ImageSourceSheet(
+    visible: Boolean,
+    onDismiss: () -> Unit,
+    onTakePhoto: () -> Unit,
+    onChooseFromGallery: () -> Unit
+) {
+    if (!visible) {
+        return
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = 24.dp,
+                    vertical = 16.dp
+                )
+        ) {
+            Text(
+                text = stringResource(
+                    Res.string.title_change_profile_picture
+                ),
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(
+                    bottom = 16.dp
+                )
+            )
+
+            ImageSourceOption(
+                title = stringResource(
+                    Res.string.action_take_photo
+                ),
+                icon = Icons.Default.CameraAlt,
+                contentDescription = stringResource(
+                    Res.string.desc_camera
+                ),
+                onClick = onTakePhoto
+            )
+
+            ImageSourceOption(
+                title = stringResource(
+                    Res.string.action_choose_from_gallery
+                ),
+                icon = Icons.Default.PhotoLibrary,
+                contentDescription = stringResource(
+                    Res.string.desc_gallery
+                ),
+                onClick = onChooseFromGallery
+            )
+
+            Spacer(
+                modifier = Modifier.height(32.dp)
+            )
+        }
+    }
+}
+
+
+@Composable
+private fun ImageSourceOption(
+    title: String,
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit
+) {
+    ListItem(
+        headlineContent = {
+            Text(title)
+        },
+        leadingContent = {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription
+            )
+        },
+        modifier = Modifier.clickable(
+            onClick = onClick
+        ),
+        colors = ListItemDefaults.colors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    )
+}
+
+@OptIn(ExperimentalEncodingApi::class)
+@Composable
+private fun rememberProfileImagePickerActions(
+    onImageSelected: (SelectedProfileImage) -> Unit
+): ProfileImagePickerActions {
+    val scope = rememberCoroutineScope()
+
+    val galleryPicker = rememberImagePickerLauncher(
+        selectionMode = SelectionMode.Single,
+        scope = scope,
+        onResult = { byteArrays ->
+            byteArrays.firstOrNull()?.let { bytes ->
+                val fileSuffix = Random.nextInt(
+                    PROFILE_IMAGE_SUFFIX_MIN,
+                    PROFILE_IMAGE_SUFFIX_MAX_EXCLUSIVE
+                )
+
+                onImageSelected(
+                    SelectedProfileImage(
+                        base64 = Base64.encode(bytes),
+                        fileName = "profile_gallery_$fileSuffix.jpg",
+                        mimeType = "image/jpeg"
+                    )
+                )
+            }
+        }
+    )
+
+    val cameraPicker = rememberCameraLauncher { bytes ->
+        if (bytes != null) {
+            val fileSuffix = Random.nextInt(
+                PROFILE_IMAGE_SUFFIX_MIN,
+                PROFILE_IMAGE_SUFFIX_MAX_EXCLUSIVE
+            )
+
+            onImageSelected(
+                SelectedProfileImage(
+                    base64 = Base64.encode(bytes),
+                    fileName = "profile_camera_$fileSuffix.jpg",
+                    mimeType = "image/jpeg"
+                )
+            )
+        }
+    }
+
+    return remember(galleryPicker, cameraPicker) {
+        ProfileImagePickerActions(
+            launchCamera = { cameraPicker.launch() },
+            launchGallery = { galleryPicker.launch() }
+        )
+    }
+}
+
+@Composable
+private fun EditProfileContent(
+    onBack: () -> Unit,
+    photoContent: @Composable () -> Unit,
+    formContent: @Composable () -> Unit
+) {
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            AppTopBar(
+                title = stringResource(Res.string.title_edit_profile),
+                onBackClick = onBack
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = MaterialTheme.dimens.screenPadding),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(
+                modifier = Modifier.height(
+                    MaterialTheme.dimens.spaceExtraLarge
+                )
+            )
+
+            photoContent()
+
+            Spacer(
+                modifier = Modifier.height(
+                    MaterialTheme.dimens.spaceXXL
+                )
+            )
+
+            formContent()
+        }
+    }
+}
+
+private fun submitProfileChanges(
+    viewModel: AuthViewModel,
+    selectedImage: SelectedProfileImage?,
+    hasNameChanged: Boolean,
+    name: String
+) {
+    selectedImage?.let { image ->
+        viewModel.updateAvatar(
+            image.base64,
+            image.fileName,
+            image.mimeType
+        )
+    }
+
+    if (hasNameChanged) {
+        viewModel.updateUser(name)
     }
 }
