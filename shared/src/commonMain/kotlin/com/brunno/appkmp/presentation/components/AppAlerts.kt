@@ -66,10 +66,6 @@ import kmpprojectbrunno.shared.generated.resources.error_unexpected_title
 import kmpprojectbrunno.shared.generated.resources.network_offline_banner
 import org.jetbrains.compose.resources.stringResource
 
-enum class AlertType {
-    SUCCESS, ERROR, INFO
-}
-
 @Composable
 private fun isAppInDarkTheme(): Boolean {
     return MaterialTheme.colorScheme.background == BackgroundDark
