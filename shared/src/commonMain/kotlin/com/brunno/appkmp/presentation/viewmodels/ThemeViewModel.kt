@@ -24,10 +24,9 @@ class ThemeViewModel(
 
     private fun getSavedTheme(): ThemeMode {
         val saved = settings.getString(PREF_THEME_MODE, ThemeMode.AUTO.name)
-        return try {
-            ThemeMode.valueOf(saved)
-        } catch (e: Exception) {
-            ThemeMode.AUTO
-        }
+
+        return ThemeMode.entries
+            .firstOrNull { it.name == saved }
+            ?: ThemeMode.AUTO
     }
 }

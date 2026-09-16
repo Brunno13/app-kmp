@@ -10,6 +10,7 @@ import io.ktor.utils.io.errors.IOException
 import kotlinx.serialization.json.Json
 import io.ktor.client.plugins.ServerResponseException
 import io.ktor.http.HttpStatusCode
+import kotlin.coroutines.cancellation.CancellationException
 
 private val errorJsonParser = Json {
     ignoreUnknownKeys = true
@@ -25,7 +26,9 @@ suspend fun parseNetworkError(exception: Exception): AppError {
 
             val errorBody = try {
                 exception.response.bodyAsText()
-            } catch (e: Exception) {
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
                 ""
             }
 
@@ -35,7 +38,7 @@ suspend fun parseNetworkError(exception: Exception): AppError {
                 } else {
                     null
                 }
-            } catch (e: Exception) {
+            } catch (_: IllegalArgumentException) {
                 null
             }
 
