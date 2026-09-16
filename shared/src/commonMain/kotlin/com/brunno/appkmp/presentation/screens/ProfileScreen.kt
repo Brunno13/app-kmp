@@ -71,6 +71,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import androidx.compose.foundation.layout.ColumnScope
 import com.brunno.appkmp.presentation.navigation.ProfileNavigationActions
 import com.brunno.appkmp.presentation.components.MenuCardWithTrailingContent
+import com.brunno.appkmp.presentation.viewmodels.ProfileViewModel
 
 private data class ProfileUiState(
     val userName: String?,
@@ -85,14 +86,17 @@ fun ProfileScreen(
     navigation: ProfileNavigationActions,
     onLogoutSuccess: () -> Unit,
     authViewModel: AuthViewModel = koinViewModel(),
-    themeViewModel: ThemeViewModel = koinViewModel()
+    themeViewModel: ThemeViewModel = koinViewModel(),
+    profileViewModel: ProfileViewModel = koinViewModel(),
 ) {
-    val currentUser by authViewModel.currentUser.collectAsState()
+    val currentUser by profileViewModel.currentUser.collectAsState()
     val themeMode by themeViewModel.themeMode.collectAsState()
     var offlineMode by remember { mutableStateOf(false) }
 
     LaunchedEffect(currentUser?.avatarFilename) {
-        authViewModel.syncAvatarIfNeeded(currentUser?.avatarFilename)
+        profileViewModel.syncAvatarIfNeeded(
+            currentUser?.avatarFilename
+        )
     }
 
     ProfileContent(
