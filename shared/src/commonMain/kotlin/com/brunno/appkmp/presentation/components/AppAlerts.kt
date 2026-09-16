@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -66,6 +67,19 @@ import kmpprojectbrunno.shared.generated.resources.error_unexpected_title
 import kmpprojectbrunno.shared.generated.resources.network_offline_banner
 import org.jetbrains.compose.resources.stringResource
 
+private data class ToastVisuals(
+    val backgroundColor: Color,
+    val accentColor: Color,
+    val icon: ImageVector,
+    val contentDescription: String
+)
+
+private data class ModalVisuals(
+    val primaryColor: Color,
+    val icon: ImageVector,
+    val contentDescription: String
+)
+
 @Composable
 private fun isAppInDarkTheme(): Boolean {
     return MaterialTheme.colorScheme.background == BackgroundDark
@@ -79,32 +93,52 @@ fun AppToast(
     modifier: Modifier = Modifier,
     isDark: Boolean = isAppInDarkTheme()
 ) {
-    val (backgroundColor, leftBorderColor, icon) = when (type) {
-        AlertType.SUCCESS -> Triple(
-            if (isDark) ToastSuccessBgDark else ToastSuccessBgLight,
-            if (isDark) ToastSuccessBorderDark else ToastSuccessBorderLight,
-            Icons.Rounded.CheckCircle
+    val visuals = when (type) {
+        AlertType.SUCCESS -> ToastVisuals(
+            backgroundColor = if (isDark) ToastSuccessBgDark else ToastSuccessBgLight,
+            accentColor = if (isDark) ToastSuccessBorderDark else ToastSuccessBorderLight,
+            icon = Icons.Rounded.CheckCircle,
+            contentDescription = type.name
         )
-        AlertType.ERROR -> Triple(
-            if (isDark) ToastErrorBgDark else ToastErrorBgLight,
-            if (isDark) ToastErrorBorderDark else ToastErrorBorderLight,
-            Icons.Rounded.Cancel
+
+        AlertType.ERROR -> ToastVisuals(
+            backgroundColor = if (isDark) ToastErrorBgDark else ToastErrorBgLight,
+            accentColor = if (isDark) ToastErrorBorderDark else ToastErrorBorderLight,
+            icon = Icons.Rounded.Cancel,
+            contentDescription = type.name
         )
-        AlertType.INFO -> Triple(
-            if (isDark) ToastInfoBgDark else ToastInfoBgLight,
-            if (isDark) ToastInfoBorderDark else ToastInfoBorderLight,
-            Icons.Rounded.Info
+
+        AlertType.INFO -> ToastVisuals(
+            backgroundColor = if (isDark) ToastInfoBgDark else ToastInfoBgLight,
+            accentColor = if (isDark) ToastInfoBorderDark else ToastInfoBorderLight,
+            icon = Icons.Rounded.Info,
+            contentDescription = type.name
         )
     }
 
-    val contentColor = if (isDark) Color.White else OnBackgroundLight
+    AppToastContent(
+        title = title,
+        message = message,
+        modifier = modifier,
+        visuals = visuals,
+        contentColor = if (isDark) Color.White else OnBackgroundLight
+    )
+}
 
+@Composable
+private fun AppToastContent(
+    title: String,
+    message: String,
+    modifier: Modifier,
+    visuals: ToastVisuals,
+    contentColor: Color
+) {
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .padding(MaterialTheme.dimens.spaceMedium),
         shape = MaterialTheme.shapes.small,
-        color = backgroundColor,
+        color = visuals.backgroundColor,
         shadowElevation = 6.dp
     ) {
         Row(
@@ -113,7 +147,7 @@ fun AppToast(
                 .drawBehind {
                     val strokeWidth = 6.dp.toPx()
                     drawRect(
-                        color = leftBorderColor,
+                        color = visuals.accentColor,
                         topLeft = Offset(0f, 0f),
                         size = Size(width = strokeWidth, height = size.height)
                     )
@@ -122,10 +156,10 @@ fun AppToast(
             verticalAlignment = Alignment.Top
         ) {
             Icon(
-                imageVector = icon,
-                contentDescription = type.name,
-                tint = leftBorderColor,
-                modifier = Modifier.size(MaterialTheme.dimens.spaceLarge) // 24.dp
+                imageVector = visuals.icon,
+                contentDescription = visuals.contentDescription,
+                tint = visuals.accentColor,
+                modifier = Modifier.size(MaterialTheme.dimens.spaceLarge)
             )
 
             Spacer(modifier = Modifier.width(MaterialTheme.dimens.spaceSmall))
@@ -137,7 +171,9 @@ fun AppToast(
                     fontSize = 16.sp,
                     color = contentColor
                 )
+
                 Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceTiny))
+
                 Text(
                     text = message,
                     fontSize = 14.sp,
@@ -155,20 +191,29 @@ fun AppModal(
     message: String,
     buttonText: String = stringResource(Res.string.action_ok),
     type: AlertType,
-    isDark: Boolean = isAppInDarkTheme(),
     onDismiss: () -> Unit
 ) {
-    val (primaryColor, icon) = when (type) {
-        AlertType.SUCCESS -> Pair(
-            if (isDark) ToastSuccessBorderDark else ToastSuccessBorderLight,
-            Icons.Rounded.CheckCircle
-        )
-        AlertType.ERROR -> Pair(if (isDark) ToastErrorBorderDark else ToastErrorBorderLight, Icons.Rounded.Cancel)
-        AlertType.INFO -> Pair(if (isDark) ToastInfoBorderDark else ToastInfoBorderLight, Icons.Rounded.Info)
-    }
+    val isDark = isAppInDarkTheme()
 
-    val textColor = MaterialTheme.colorScheme.onSurface
-    val subtitleColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+    val visuals = when (type) {
+        AlertType.SUCCESS -> ModalVisuals(
+            primaryColor = if (isDark) ToastSuccessBorderDark else ToastSuccessBorderLight,
+            icon = Icons.Rounded.CheckCircle,
+            contentDescription = type.name
+        )
+
+        AlertType.ERROR -> ModalVisuals(
+            primaryColor = if (isDark) ToastErrorBorderDark else ToastErrorBorderLight,
+            icon = Icons.Rounded.Cancel,
+            contentDescription = type.name
+        )
+
+        AlertType.INFO -> ModalVisuals(
+            primaryColor = if (isDark) ToastInfoBorderDark else ToastInfoBorderLight,
+            icon = Icons.Rounded.Info,
+            contentDescription = type.name
+        )
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -177,61 +222,81 @@ fun AppModal(
             dismissOnClickOutside = false
         )
     ) {
-        Surface(
-            shape = MaterialTheme.shapes.medium,
-            color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier.fillMaxWidth()
+        AppModalContent(
+            title = title,
+            message = message,
+            buttonText = buttonText,
+            visuals = visuals,
+            onDismiss = onDismiss
+        )
+    }
+}
+
+@Composable
+private fun AppModalContent(
+    title: String,
+    message: String,
+    buttonText: String,
+    visuals: ModalVisuals,
+    onDismiss: () -> Unit
+) {
+    val textColor = MaterialTheme.colorScheme.onSurface
+    val subtitleColor = textColor.copy(alpha = 0.7f)
+
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surface,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(MaterialTheme.dimens.spaceLarge),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier.padding(MaterialTheme.dimens.spaceLarge),
-                horizontalAlignment = Alignment.CenterHorizontally
+            Icon(
+                imageVector = visuals.icon,
+                contentDescription = visuals.contentDescription,
+                tint = visuals.primaryColor,
+                modifier = Modifier.size(64.dp)
+            )
+
+            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceLarge))
+
+            Text(
+                text = title,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = textColor,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceSmall))
+
+            Text(
+                text = message,
+                fontSize = 15.sp,
+                color = subtitleColor,
+                textAlign = TextAlign.Center,
+                lineHeight = 22.sp
+            )
+
+            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceLarge))
+
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(MaterialTheme.dimens.buttonHeight),
+                shape = MaterialTheme.shapes.small,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = visuals.primaryColor,
+                    contentColor = Color.White
+                )
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = type.name,
-                    tint = primaryColor,
-                    modifier = Modifier.size(64.dp)
-                )
-
-                Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceLarge))
-
                 Text(
-                    text = title,
+                    text = buttonText,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                    color = textColor,
-                    textAlign = TextAlign.Center
+                    fontSize = 16.sp
                 )
-
-                Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceSmall))
-
-                Text(
-                    text = message,
-                    fontSize = 15.sp,
-                    color = subtitleColor,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 22.sp
-                )
-
-                Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceLarge))
-
-                Button(
-                    onClick = onDismiss,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(MaterialTheme.dimens.buttonHeight),
-                    shape = MaterialTheme.shapes.small,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = primaryColor,
-                        contentColor = Color.White
-                    )
-                ) {
-                    Text(
-                        text = buttonText,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
-                }
             }
         }
     }
@@ -253,20 +318,7 @@ fun AppErrorScreen(
     ) {
         Spacer(modifier = Modifier.weight(1f))
 
-        Box(
-            modifier = Modifier
-                .size(80.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.error.copy(alpha = 0.2f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Warning,
-                contentDescription = "Error",
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(40.dp)
-            )
-        }
+        AppErrorIllustration()
 
         Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceLarge))
 
@@ -309,6 +361,24 @@ fun AppErrorScreen(
         }
 
         Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
+    }
+}
+
+@Composable
+private fun AppErrorIllustration() {
+    Box(
+        modifier = Modifier
+            .size(80.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.error.copy(alpha = 0.2f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Warning,
+            contentDescription = "Error",
+            tint = MaterialTheme.colorScheme.error,
+            modifier = Modifier.size(40.dp)
+        )
     }
 }
 
