@@ -43,6 +43,19 @@ import kmpprojectbrunno.shared.generated.resources.placeholder_password
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
+private data class RegisterFormState(
+    val fullName: String = "",
+    val email: String = "",
+    val password: String = "",
+    val confirmPassword: String = ""
+) {
+    val isValid: Boolean
+        get() = fullName.isNotBlank() &&
+                email.isNotBlank() &&
+                password.isNotBlank() &&
+                password == confirmPassword
+}
+
 @Composable
 fun RegisterScreen(
     onNavigateToLogin: () -> Unit,
@@ -51,11 +64,7 @@ fun RegisterScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val currentUser by viewModel.currentUser.collectAsState()
-
-    var fullName by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
+    var form by remember { mutableStateOf(RegisterFormState()) }
 
     LaunchedEffect(currentUser) {
         if (currentUser != null) {
@@ -64,6 +73,32 @@ fun RegisterScreen(
         }
     }
 
+    RegisterContent(
+        form = form,
+        uiState = uiState,
+        onFormChange = { form = it },
+        onRegister = {
+            viewModel.register(
+                form.fullName,
+                form.email,
+                form.password
+            )
+        },
+        onNavigateToLogin = {
+            viewModel.resetState()
+            onNavigateToLogin()
+        }
+    )
+}
+
+@Composable
+private fun RegisterContent(
+    form: RegisterFormState,
+    uiState: LoginUiState,
+    onFormChange: (RegisterFormState) -> Unit,
+    onRegister: () -> Unit,
+    onNavigateToLogin: () -> Unit
+) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
@@ -75,92 +110,178 @@ fun RegisterScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = stringResource(Res.string.create_account),
-                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceXXL))
+            RegisterHeader()
 
-            AppTextField(
-                value = fullName,
-                onValueChange = { fullName = it },
-                placeholder = stringResource(Res.string.placeholder_full_name)
-            )
-            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
-            AppTextField(
-                value = email,
-                onValueChange = { email = it },
-                placeholder = stringResource(Res.string.placeholder_email)
-            )
-            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
-            AppTextField(
-                value = password,
-                onValueChange = { password = it },
-                placeholder = stringResource(Res.string.placeholder_password),
-                isPassword = true
-            )
-            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
-            AppTextField(
-                value = confirmPassword,
-                onValueChange = { confirmPassword = it },
-                placeholder = stringResource(Res.string.placeholder_confirm_password),
-                isPassword = true
-            )
-            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceExtraLarge))
-
-            if (uiState is LoginUiState.Error) {
-                Text(
-                    text = (uiState as LoginUiState.Error).error.asString(),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
-            }
-
-            val isFormValid =
-                fullName.isNotBlank() &&
-                        email.isNotBlank() &&
-                        password.isNotBlank() &&
-                        password == confirmPassword
-            val isLoading = uiState is LoginUiState.Loading
-
-            Button(
-                onClick = { viewModel.register(fullName, email, password) },
-                enabled = isFormValid && !isLoading,
-                modifier = Modifier.fillMaxWidth().height(MaterialTheme.dimens.buttonHeight),
-                shape = MaterialTheme.shapes.medium
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(MaterialTheme.dimens.spaceLarge),
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                } else {
-                    Text(text = stringResource(Res.string.action_sign_up), fontWeight = FontWeight.Bold)
+            RegisterIdentityFields(
+                fullName = form.fullName,
+                email = form.email,
+                onFullNameChange = {
+                    onFormChange(form.copy(fullName = it))
+                },
+                onEmailChange = {
+                    onFormChange(form.copy(email = it))
                 }
-            }
+            )
+
+            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
+
+            RegisterPasswordFields(
+                password = form.password,
+                confirmPassword = form.confirmPassword,
+                onPasswordChange = {
+                    onFormChange(form.copy(password = it))
+                },
+                onConfirmPasswordChange = {
+                    onFormChange(form.copy(confirmPassword = it))
+                }
+            )
 
             Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceExtraLarge))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(Res.string.msg_already_have_account),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.width(MaterialTheme.dimens.spaceTiny))
-                Text(
-                    text = stringResource(Res.string.action_sign_in),
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .clickable {
-                            viewModel.resetState()
-                            onNavigateToLogin()
-                        }
-                        .padding(MaterialTheme.dimens.spaceTiny)
-                )
-            }
+            RegisterStatusMessage(uiState = uiState)
+
+            RegisterSubmitButton(
+                isFormValid = form.isValid,
+                isLoading = uiState is LoginUiState.Loading,
+                onRegister = onRegister
+            )
+
+            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceExtraLarge))
+
+            RegisterLoginPrompt(
+                onNavigateToLogin = onNavigateToLogin
+            )
         }
+    }
+}
+
+@Composable
+private fun RegisterHeader() {
+    Text(
+        text = stringResource(Res.string.create_account),
+        style = MaterialTheme.typography.headlineMedium.copy(
+            fontWeight = FontWeight.Bold
+        ),
+        color = MaterialTheme.colorScheme.onBackground
+    )
+
+    Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceXXL))
+}
+
+@Composable
+private fun RegisterIdentityFields(
+    fullName: String,
+    email: String,
+    onFullNameChange: (String) -> Unit,
+    onEmailChange: (String) -> Unit
+) {
+    AppTextField(
+        value = fullName,
+        onValueChange = onFullNameChange,
+        placeholder = stringResource(Res.string.placeholder_full_name)
+    )
+
+    Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
+
+    AppTextField(
+        value = email,
+        onValueChange = onEmailChange,
+        placeholder = stringResource(Res.string.placeholder_email)
+    )
+}
+
+@Composable
+private fun RegisterPasswordFields(
+    password: String,
+    confirmPassword: String,
+    onPasswordChange: (String) -> Unit,
+    onConfirmPasswordChange: (String) -> Unit
+) {
+    AppTextField(
+        value = password,
+        onValueChange = onPasswordChange,
+        placeholder = stringResource(Res.string.placeholder_password),
+        isPassword = true
+    )
+
+    Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
+
+    AppTextField(
+        value = confirmPassword,
+        onValueChange = onConfirmPasswordChange,
+        placeholder = stringResource(Res.string.placeholder_confirm_password),
+        isPassword = true
+    )
+}
+
+@Composable
+private fun RegisterStatusMessage(
+    uiState: LoginUiState
+) {
+    when (val state = uiState) {
+        is LoginUiState.Error -> {
+            Text(
+                text = state.error.asString(),
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
+        }
+
+        else -> Unit
+    }
+}
+
+@Composable
+private fun RegisterSubmitButton(
+    isFormValid: Boolean,
+    isLoading: Boolean,
+    onRegister: () -> Unit
+) {
+    Button(
+        onClick = onRegister,
+        enabled = isFormValid && !isLoading,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(MaterialTheme.dimens.buttonHeight),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(MaterialTheme.dimens.spaceLarge),
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+        } else {
+            Text(
+                text = stringResource(Res.string.action_sign_up),
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun RegisterLoginPrompt(
+    onNavigateToLogin: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = stringResource(Res.string.msg_already_have_account),
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.width(MaterialTheme.dimens.spaceTiny))
+
+        Text(
+            text = stringResource(Res.string.action_sign_in),
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .clickable(onClick = onNavigateToLogin)
+                .padding(MaterialTheme.dimens.spaceTiny)
+        )
     }
 }
