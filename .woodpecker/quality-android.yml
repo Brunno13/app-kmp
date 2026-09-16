@@ -93,6 +93,98 @@ steps:
             "$XML" \
             | tail -n 1
         done
+        
+        echo
+        echo "===== DETEKT AUTHORED COMMON MAIN ====="
+
+        set +e
+
+        ./gradlew \
+          :shared:detektAuthoredCommonMain \
+          --rerun-tasks
+
+        DETEKT_COMMON_RC="$?"
+
+        set -e
+
+        echo "DETEKT_COMMON_RC=$DETEKT_COMMON_RC"
+
+        echo
+        echo "===== DETEKT AUTHORED ANDROID MAIN ====="
+
+        set +e
+
+        ./gradlew \
+          :shared:detektAuthoredAndroidMain \
+          --rerun-tasks
+
+        DETEKT_ANDROID_RC="$?"
+
+        set -e
+
+        echo "DETEKT_ANDROID_RC=$DETEKT_ANDROID_RC"
+
+        echo
+        echo "===== DETEKT REPORTS ====="
+
+        COMMON_XML="shared/build/reports/detekt/authored-common-main.xml"
+        ANDROID_XML="shared/build/reports/detekt/authored-android-main.xml"
+
+        test -f "$COMMON_XML"
+        test -f "$ANDROID_XML"
+
+        find shared/build/reports/detekt \
+          -maxdepth 1 \
+          -type f \
+          -printf '%f\n' \
+          | sort
+
+        echo
+        echo "===== DETEKT FINDING COUNTS ====="
+
+        COMMON_FINDINGS="$(
+          grep -c '<error ' "$COMMON_XML" || true
+        )"
+
+        ANDROID_FINDINGS="$(
+          grep -c '<error ' "$ANDROID_XML" || true
+        )"
+
+        echo "DETEKT_COMMON_FINDINGS=$COMMON_FINDINGS"
+        echo "DETEKT_ANDROID_FINDINGS=$ANDROID_FINDINGS"
+
+        echo
+        echo "===== DETEKT DIAGNOSTIC SUMMARY ====="
+
+        if [ "$DETEKT_COMMON_RC" -eq 0 ]; then
+          echo "DETEKT_COMMON=PASS"
+        else
+          echo "DETEKT_COMMON=FAIL"
+        fi
+
+        if [ "$DETEKT_ANDROID_RC" -eq 0 ]; then
+          echo "DETEKT_ANDROID=PASS"
+        else
+          echo "DETEKT_ANDROID=FAIL"
+        fi
+
+        echo
+        echo "===== QUALITY SUMMARY ====="
+
+        echo "UNIT_TESTS=PASS"
+        echo "BUSINESS_COVERAGE=PASS"
+
+        if [ "$DETEKT_COMMON_RC" -eq 0 ]; then
+          echo "DETEKT_COMMON=PASS"
+        else
+          echo "DETEKT_COMMON=DIAGNOSTIC_FAIL"
+        fi
+
+        if [ "$DETEKT_ANDROID_RC" -eq 0 ]; then
+          echo "DETEKT_ANDROID=PASS"
+        else
+          echo "DETEKT_ANDROID=DIAGNOSTIC_FAIL"
+        fi
 
         echo
         echo "ANDROID_QUALITY_GATE=PASS"

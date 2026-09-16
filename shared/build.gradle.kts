@@ -273,6 +273,43 @@ tasks.register<io.gitlab.arturbosch.detekt.Detekt>("detektAuthoredCommonMain") {
             include("**/*.kt")
         }
     )
+
+    reports {
+        html.required.set(true)
+        html.outputLocation.set(
+            layout.buildDirectory.file(
+                "reports/detekt/authored-common-main.html"
+            )
+        )
+
+        xml.required.set(true)
+        xml.outputLocation.set(
+            layout.buildDirectory.file(
+                "reports/detekt/authored-common-main.xml"
+            )
+        )
+
+        txt.required.set(true)
+        txt.outputLocation.set(
+            layout.buildDirectory.file(
+                "reports/detekt/authored-common-main.txt"
+            )
+        )
+
+        sarif.required.set(true)
+        sarif.outputLocation.set(
+            layout.buildDirectory.file(
+                "reports/detekt/authored-common-main.sarif"
+            )
+        )
+
+        md.required.set(true)
+        md.outputLocation.set(
+            layout.buildDirectory.file(
+                "reports/detekt/authored-common-main.md"
+            )
+        )
+    }
 }
 
 tasks.register<io.gitlab.arturbosch.detekt.Detekt>("detektAuthoredAndroidMain") {
@@ -290,4 +327,41 @@ tasks.register<io.gitlab.arturbosch.detekt.Detekt>("detektAuthoredAndroidMain") 
             include("**/*.kt")
         }
     )
+
+    reports {
+        html.required.set(true)
+        html.outputLocation.set(
+            layout.buildDirectory.file(
+                "reports/detekt/authored-android-main.html"
+            )
+        )
+
+        xml.required.set(true)
+        xml.outputLocation.set(
+            layout.buildDirectory.file(
+                "reports/detekt/authored-android-main.xml"
+            )
+        )
+
+        txt.required.set(true)
+        txt.outputLocation.set(
+            layout.buildDirectory.file(
+                "reports/detekt/authored-android-main.txt"
+            )
+        )
+
+        sarif.required.set(true)
+        sarif.outputLocation.set(
+            layout.buildDirectory.file(
+                "reports/detekt/authored-android-main.sarif"
+            )
+        )
+
+        md.required.set(true)
+        md.outputLocation.set(
+            layout.buildDirectory.file(
+                "reports/detekt/authored-android-main.md"
+            )
+        )
+    }
 }
