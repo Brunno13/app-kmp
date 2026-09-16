@@ -1,26 +1,6 @@
 package com.brunno.appkmp.domain.repository
 
-import com.brunno.appkmp.data.local.UserEntity
-import com.brunno.appkmp.data.remote.models.ActiveSession
-import com.brunno.appkmp.domain.error.AppError
-import com.brunno.appkmp.domain.error.AppResult
-import kotlinx.coroutines.flow.Flow
-
-interface AuthRepository {
-    fun isBiometricEnabled(): Boolean
-    fun setBiometricEnabled(enabled: Boolean)
-    fun observeCurrentUser(): Flow<UserEntity?>
-    fun getCurrentToken(): String?
-    fun observeActiveSessions(): Flow<List<ActiveSession>>
-    suspend fun syncActiveSessions(): AppResult<Unit, AppError>
-
-    suspend fun login(email: String,password: String): AppResult<Unit, AppError>
-    suspend fun register(name: String,email: String,password: String): AppResult<Unit, AppError>
-    suspend fun forgotPassword(email: String): AppResult<Unit, AppError>
-    suspend fun changePassword(currentPassword: String,newPassword: String): AppResult<Unit, AppError>
-    suspend fun updateUser(name: String): AppResult<Unit, AppError>
-    suspend fun revokeSession(token: String): AppResult<Unit, AppError>
-    suspend fun logout()
-    suspend fun updateAvatar(base64: String,fileName: String,mimeType: String): AppResult<Unit, AppError>
-    suspend fun syncAvatar(filename: String)
-}
+interface AuthRepository :
+    AuthenticationRepository,
+    ProfileRepository,
+    SecurityRepository
