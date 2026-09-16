@@ -121,11 +121,6 @@ fun EditProfileScreen(
         }
     }
 
-    val bitmapToDisplay = remember(selectedBase64, currentUser?.avatarData) {
-        val base64ToUse = selectedBase64 ?: currentUser?.avatarData
-        base64ToUse?.let { decodeBase64ToImageBitmap(it) }
-    }
-
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { AppTopBar(title = stringResource(Res.string.title_edit_profile), onBackClick = onBack) }
@@ -139,45 +134,14 @@ fun EditProfileScreen(
         ) {
             Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceExtraLarge))
 
-            Box(contentAlignment = Alignment.BottomCenter) {
-                Box(
-                    modifier = Modifier
-                        .size(120.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (bitmapToDisplay != null) {
-                        Image(
-                            bitmap = bitmapToDisplay,
-                            contentDescription = stringResource(Res.string.desc_edit_profile_photo),
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Text(
-                            text = currentUser?.name?.take(1)?.uppercase() ?: "",
-                            style = MaterialTheme.typography.headlineLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+            ProfilePhotoSection(
+                selectedBase64 = selectedBase64,
+                avatarData = currentUser?.avatarData,
+                userName = currentUser?.name,
+                onChangePhotoClick = {
+                    showImageSourceSheet = true
                 }
-
-                Button(
-                    onClick = { showImageSourceSheet = true },
-                    modifier = Modifier.offset(y = 12.dp).height(32.dp),
-                    shape = CircleShape,
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text(
-                        text = stringResource(Res.string.action_change_photo),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
-            }
+            )
 
             Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceXXL))
 
@@ -305,6 +269,70 @@ fun EditProfileScreen(
                     Spacer(modifier = Modifier.height(32.dp))
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ProfilePhotoSection(
+    selectedBase64: String?,
+    avatarData: String?,
+    userName: String?,
+    onChangePhotoClick: () -> Unit
+) {
+    val bitmapToDisplay = remember(selectedBase64, avatarData) {
+        val base64ToUse = selectedBase64 ?: avatarData
+        base64ToUse?.let { decodeBase64ToImageBitmap(it) }
+    }
+
+    Box(
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
+            if (bitmapToDisplay != null) {
+                Image(
+                    bitmap = bitmapToDisplay,
+                    contentDescription = stringResource(
+                        Res.string.desc_edit_profile_photo
+                    ),
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Text(
+                    text = userName?.take(1)?.uppercase() ?: "",
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        Button(
+            onClick = onChangePhotoClick,
+            modifier = Modifier
+                .offset(y = 12.dp)
+                .height(32.dp),
+            shape = CircleShape,
+            contentPadding = PaddingValues(
+                horizontal = 16.dp,
+                vertical = 0.dp
+            ),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary
+            )
+        ) {
+            Text(
+                text = stringResource(Res.string.action_change_photo),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
         }
     }
 }
