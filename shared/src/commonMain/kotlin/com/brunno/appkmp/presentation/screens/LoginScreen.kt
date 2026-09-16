@@ -52,6 +52,22 @@ import kmpprojectbrunno.shared.generated.resources.welcome_back
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
+private data class LoginFormState(
+    val email: String = "",
+    val password: String = ""
+) {
+    val isValid: Boolean
+        get() = email.isNotBlank() && password.isNotBlank()
+}
+
+private class LoginActions(
+    val onFormChange: (LoginFormState) -> Unit,
+    val onLogin: () -> Unit,
+    val onForgotPassword: () -> Unit,
+    val onRetryBiometrics: () -> Unit,
+    val onRegister: () -> Unit
+)
+
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
@@ -62,39 +78,79 @@ fun LoginScreen(
     val uiState by viewModel.uiState.collectAsState()
     val currentUser by viewModel.currentUser.collectAsState()
     val autoLoginState by viewModel.autoLoginState.collectAsState()
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    val biometricManager = rememberBiometricManager()
-    val titleSecureAccess = stringResource(Res.string.title_secure_access)
-    val subtitleSecureAccess = stringResource(Res.string.subtitle_secure_access)
+    var form by remember { mutableStateOf(LoginFormState()) }
 
-    LaunchedEffect(currentUser) {
-        if (currentUser != null && autoLoginState == AutoLoginState.Idle) {
+    val biometricManager = rememberBiometricManager()
+    val secureAccessTitle = stringResource(Res.string.title_secure_access)
+    val secureAccessSubtitle = stringResource(Res.string.subtitle_secure_access)
+
+    LoginAutoLoginEffects(
+        hasCurrentUser = currentUser != null,
+        autoLoginState = autoLoginState,
+        onCheckAutoLogin = {
             viewModel.checkAutoLogin(biometricManager.isBiometricAvailable())
+        },
+        onProceedToHome = {
+            viewModel.resetAutoLoginState()
+            onLoginSuccess()
+        },
+        onRequestBiometrics = {
+            biometricManager.promptBiometricAuth(
+                title = secureAccessTitle,
+                subtitle = secureAccessSubtitle,
+                onSuccess = viewModel::onBiometricSuccess,
+                onFailed = {}
+            )
+        }
+    )
+
+    LoginContent(
+        form = form,
+        uiState = uiState,
+        autoLoginState = autoLoginState,
+        actions = LoginActions(
+            onFormChange = { form = it },
+            onLogin = { viewModel.login(form.email, form.password) },
+            onForgotPassword = onNavigateToForgotPassword,
+            onRetryBiometrics = {
+                viewModel.checkAutoLogin(biometricManager.isBiometricAvailable())
+            },
+            onRegister = onNavigateToRegister
+        )
+    )
+}
+
+@Composable
+private fun LoginAutoLoginEffects(
+    hasCurrentUser: Boolean,
+    autoLoginState: AutoLoginState,
+    onCheckAutoLogin: () -> Unit,
+    onProceedToHome: () -> Unit,
+    onRequestBiometrics: () -> Unit
+) {
+    LaunchedEffect(hasCurrentUser) {
+        if (hasCurrentUser && autoLoginState == AutoLoginState.Idle) {
+            onCheckAutoLogin()
         }
     }
 
     LaunchedEffect(autoLoginState) {
         when (autoLoginState) {
-            is AutoLoginState.ProceedToHome -> {
-                viewModel.resetAutoLoginState()
-                onLoginSuccess()
-            }
-            is AutoLoginState.RequestBiometrics -> {
-                biometricManager.promptBiometricAuth(
-                    title = titleSecureAccess,
-                    subtitle = subtitleSecureAccess,
-                    onSuccess = { viewModel.onBiometricSuccess() },
-                    onFailed = { /* Permanece na tela de login para tentar novamente ou digitar senha */ }
-                )
-            }
-            is AutoLoginState.BiometricsRevoked -> {
-                // A ViewModel já deslogou o utilizador. Aqui a tela só aguarda.
-            }
-            is AutoLoginState.Idle -> {}
+            is AutoLoginState.ProceedToHome -> onProceedToHome()
+            is AutoLoginState.RequestBiometrics -> onRequestBiometrics()
+            is AutoLoginState.BiometricsRevoked -> Unit
+            is AutoLoginState.Idle -> Unit
         }
     }
+}
 
+@Composable
+private fun LoginContent(
+    form: LoginFormState,
+    uiState: LoginUiState,
+    autoLoginState: AutoLoginState,
+    actions: LoginActions
+) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
@@ -106,103 +162,190 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = stringResource(Res.string.welcome_back),
-                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceXXL))
+            LoginHeader()
 
-            AppTextField(
-                value = email,
-                onValueChange = { email = it },
-                placeholder = stringResource(Res.string.placeholder_email)
+            LoginCredentials(
+                form = form,
+                onFormChange = actions.onFormChange,
+                onForgotPassword = actions.onForgotPassword
             )
+
             Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
 
-            AppTextField(
-                value = password,
-                onValueChange = { password = it },
-                placeholder = stringResource(Res.string.placeholder_password),
-                isPassword = true
+            LoginSubmitButton(
+                isFormValid = form.isValid,
+                isLoading = uiState is LoginUiState.Loading,
+                onLogin = actions.onLogin
             )
 
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                TextButton(onClick = onNavigateToForgotPassword) {
-                    Text(
-                        text = stringResource(Res.string.action_forgot_password),
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
+            LoginBiometricStatus(
+                autoLoginState = autoLoginState,
+                onRetryBiometrics = actions.onRetryBiometrics
+            )
 
-            Button(
-                onClick = { viewModel.login(email, password) },
-                enabled = uiState !is LoginUiState.Loading && email.isNotBlank() && password.isNotBlank(),
-                modifier = Modifier.fillMaxWidth().height(MaterialTheme.dimens.buttonHeight),
-                shape = MaterialTheme.shapes.medium
-            ) {
-                if (uiState is LoginUiState.Loading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(MaterialTheme.dimens.spaceLarge),
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                } else {
-                    Text(
-                        text = stringResource(Res.string.action_sign_in),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
-                }
-            }
-
-            if (autoLoginState == AutoLoginState.RequestBiometrics) {
-                Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
-                TextButton(onClick = { viewModel.checkAutoLogin(biometricManager.isBiometricAvailable()) }) {
-                    Text(
-                        text = stringResource(Res.string.action_retry_biometrics),
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-
-            if (autoLoginState == AutoLoginState.BiometricsRevoked) {
-                Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
-                Text(
-                    text = stringResource(Res.string.msg_biometrics_revoked),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            if (uiState is LoginUiState.Error) {
-                Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
-                Text(
-                    text = (uiState as LoginUiState.Error).error.asString(),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
+            LoginErrorMessage(uiState = uiState)
 
             Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceExtraLarge))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            LoginRegisterPrompt(onRegister = actions.onRegister)
+        }
+    }
+}
+
+@Composable
+private fun LoginHeader() {
+    Text(
+        text = stringResource(Res.string.welcome_back),
+        style = MaterialTheme.typography.headlineMedium.copy(
+            fontWeight = FontWeight.Bold
+        ),
+        color = MaterialTheme.colorScheme.onBackground
+    )
+
+    Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceXXL))
+}
+
+@Composable
+private fun LoginCredentials(
+    form: LoginFormState,
+    onFormChange: (LoginFormState) -> Unit,
+    onForgotPassword: () -> Unit
+) {
+    AppTextField(
+        value = form.email,
+        onValueChange = {
+            onFormChange(form.copy(email = it))
+        },
+        placeholder = stringResource(Res.string.placeholder_email)
+    )
+
+    Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
+
+    AppTextField(
+        value = form.password,
+        onValueChange = {
+            onFormChange(form.copy(password = it))
+        },
+        placeholder = stringResource(Res.string.placeholder_password),
+        isPassword = true
+    )
+
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.CenterEnd
+    ) {
+        TextButton(onClick = onForgotPassword) {
+            Text(
+                text = stringResource(Res.string.action_forgot_password),
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+@Composable
+private fun LoginSubmitButton(
+    isFormValid: Boolean,
+    isLoading: Boolean,
+    onLogin: () -> Unit
+) {
+    Button(
+        onClick = onLogin,
+        enabled = isFormValid && !isLoading,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(MaterialTheme.dimens.buttonHeight),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(MaterialTheme.dimens.spaceLarge),
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+        } else {
+            Text(
+                text = stringResource(Res.string.action_sign_in),
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun LoginBiometricStatus(
+    autoLoginState: AutoLoginState,
+    onRetryBiometrics: () -> Unit
+) {
+    when (autoLoginState) {
+        is AutoLoginState.RequestBiometrics -> {
+            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
+
+            TextButton(onClick = onRetryBiometrics) {
                 Text(
-                    text = stringResource(Res.string.msg_dont_have_account),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.width(MaterialTheme.dimens.spaceTiny))
-                Text(
-                    text = stringResource(Res.string.action_sign_up),
+                    text = stringResource(Res.string.action_retry_biometrics),
                     color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { onNavigateToRegister() }.padding(MaterialTheme.dimens.spaceTiny)
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
+
+        is AutoLoginState.BiometricsRevoked -> {
+            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
+
+            Text(
+                text = stringResource(Res.string.msg_biometrics_revoked),
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center
+            )
+        }
+
+        else -> Unit
+    }
+}
+
+@Composable
+private fun LoginErrorMessage(
+    uiState: LoginUiState
+) {
+    when (val state = uiState) {
+        is LoginUiState.Error -> {
+            Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
+
+            Text(
+                text = state.error.asString(),
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        else -> Unit
+    }
+}
+
+@Composable
+private fun LoginRegisterPrompt(
+    onRegister: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = stringResource(Res.string.msg_dont_have_account),
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.width(MaterialTheme.dimens.spaceTiny))
+
+        Text(
+            text = stringResource(Res.string.action_sign_up),
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .clickable(onClick = onRegister)
+                .padding(MaterialTheme.dimens.spaceTiny)
+        )
     }
 }
