@@ -29,45 +29,116 @@ fun MenuCard(
     icon: ImageVector,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    subtitle: String? = null,
-    trailingContent: @Composable (() -> Unit)? = null
+    subtitle: String? = null
 ) {
-    val clickableModifier = if (onClick != null) Modifier.clickable { onClick() } else Modifier
+    val clickableModifier = if (onClick != null) {
+        Modifier.clickable(onClick = onClick)
+    } else {
+        Modifier
+    }
 
     OutlinedCard(
-        modifier = modifier.fillMaxWidth().then(clickableModifier),
+        modifier = modifier
+            .fillMaxWidth()
+            .then(clickableModifier),
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp).defaultMinSize(minHeight = 32.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = title, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                if (subtitle != null) {
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+        MenuCardContent(
+            title = title,
+            icon = icon,
+            subtitle = subtitle,
+            trailingContent = if (onClick != null) {
+                {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            } else {
+                null
             }
+        )
+    }
+}
 
-            if (trailingContent != null) {
-                Spacer(modifier = Modifier.width(8.dp))
-                trailingContent()
-            } else if (onClick != null) {
-                Spacer(modifier = Modifier.width(8.dp))
-                Icon(
-                    Icons.Default.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+@Composable
+fun MenuCardWithTrailingContent(
+    title: String,
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    trailingContent: @Composable () -> Unit
+) {
+    OutlinedCard(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
+    ) {
+        MenuCardContent(
+            title = title,
+            icon = icon,
+            subtitle = subtitle,
+            trailingContent = trailingContent
+        )
+    }
+}
+
+@Composable
+private fun MenuCardContent(
+    title: String,
+    icon: ImageVector,
+    subtitle: String?,
+    trailingContent: @Composable (() -> Unit)?
+) {
+    Row(
+        modifier = Modifier
+            .padding(16.dp)
+            .defaultMinSize(minHeight = 32.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(
+                text = title,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+
+        if (trailingContent != null) {
+            Spacer(modifier = Modifier.width(8.dp))
+            trailingContent()
         }
     }
 }

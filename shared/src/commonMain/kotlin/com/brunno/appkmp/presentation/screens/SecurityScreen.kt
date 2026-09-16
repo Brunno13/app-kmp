@@ -65,6 +65,7 @@ import kmpprojectbrunno.shared.generated.resources.warning_biometric
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import com.brunno.appkmp.presentation.components.MenuCardWithTrailingContent
 
 private const val USER_AGENT_DISPLAY_MAX_LENGTH = 30
 private const val SUCCESS_MESSAGE_DURATION_MILLIS = 3_000L
@@ -291,7 +292,7 @@ private fun BiometricSection(
 
         Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceMedium))
 
-        MenuCard(
+        MenuCardWithTrailingContent(
             title = stringResource(Res.string.title_biometric_unlock),
             subtitle = stringResource(Res.string.desc_biometric_unlock),
             icon = Icons.Default.Lock,
@@ -384,7 +385,7 @@ private fun ActiveSessionCard(
     val unknownDeviceText = stringResource(Res.string.label_unknown_device)
     val unknownIpText = stringResource(Res.string.label_unknown)
 
-    MenuCard(
+    MenuCardWithTrailingContent(
         title = session.userAgent
             ?.take(USER_AGENT_DISPLAY_MAX_LENGTH)
             ?: unknownDeviceText,
@@ -409,5 +410,7 @@ private fun ActiveSessionCard(
         }
     )
 
-    Spacer(modifier = Modifier.height(MaterialTheme.dimens.spaceSmall))
+    Spacer(
+        modifier = Modifier.height(MaterialTheme.dimens.spaceSmall)
+    )
 }

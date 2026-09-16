@@ -70,6 +70,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.compose.foundation.layout.ColumnScope
 import com.brunno.appkmp.presentation.navigation.ProfileNavigationActions
+import com.brunno.appkmp.presentation.components.MenuCardWithTrailingContent
 
 private data class ProfileUiState(
     val userName: String?,
@@ -346,7 +347,7 @@ private fun ProfileOfflineMode(
     offlineMode: Boolean,
     onOfflineModeChange: (Boolean) -> Unit
 ) {
-    MenuCard(
+    MenuCardWithTrailingContent(
         title = stringResource(Res.string.title_offline_mode),
         icon = Icons.Default.Wifi,
         subtitle = stringResource(Res.string.desc_offline_mode),
