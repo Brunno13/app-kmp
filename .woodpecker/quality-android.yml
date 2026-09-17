@@ -154,6 +154,118 @@ steps:
         echo "DETEKT_ANDROID_FINDINGS=$ANDROID_FINDINGS"
 
         echo
+        echo "===== ANDROID LINT / PRODUCTION DEBUG ====="
+
+        set +e
+
+        ./gradlew \
+          :androidApp:lintProductionDebug \
+          --rerun-tasks
+
+        ANDROID_LINT_RC="$?"
+
+        set -e
+
+        echo "ANDROID_LINT_RC=$ANDROID_LINT_RC"
+
+        echo
+        echo "===== ANDROID LINT REPORT ====="
+
+        LINT_XML="androidApp/build/reports/lint-results-productionDebug.xml"
+        LINT_TXT="androidApp/build/reports/lint-results-productionDebug.txt"
+
+        LINT_REPORT_OK=1
+
+        if [ -f "$LINT_XML" ]; then
+          echo "ANDROID_LINT_XML=$LINT_XML"
+        else
+          echo "ERROR: Android Lint XML report not found"
+          LINT_REPORT_OK=0
+        fi
+
+        if [ -f "$LINT_TXT" ]; then
+          echo "ANDROID_LINT_TXT=$LINT_TXT"
+
+          echo
+          echo "===== ANDROID LINT TEXT REPORT ====="
+
+          cat "$LINT_TXT"
+        fi
+
+        echo
+        echo "===== ANDROID LINT FINDING COUNTS ====="
+
+        LINT_TOTAL=0
+        LINT_ERRORS=0
+        LINT_FATALS=0
+        LINT_WARNINGS=0
+        LINT_DEPENDENCY_ADVISORIES=0
+        LINT_AGP_ADVISORIES=0
+        LINT_ACTIONABLE_WARNINGS=0
+
+        if [ "$LINT_REPORT_OK" -eq 1 ]; then
+          LINT_TOTAL="$(
+            grep -c '<issue' "$LINT_XML" || true
+          )"
+
+          LINT_ERRORS="$(
+            grep -c 'severity="Error"' "$LINT_XML" || true
+          )"
+
+          LINT_FATALS="$(
+            grep -c 'severity="Fatal"' "$LINT_XML" || true
+          )"
+
+          LINT_WARNINGS="$(
+            grep -c 'severity="Warning"' "$LINT_XML" || true
+          )"
+
+          LINT_DEPENDENCY_ADVISORIES="$(
+            grep -c 'id="GradleDependency"' "$LINT_XML" || true
+          )"
+
+          LINT_AGP_ADVISORIES="$(
+            grep -c 'id="AndroidGradlePluginVersion"' "$LINT_XML" || true
+          )"
+
+          LINT_ACTIONABLE_WARNINGS="$(
+            expr \
+              "$LINT_WARNINGS" \
+              - "$LINT_DEPENDENCY_ADVISORIES" \
+              - "$LINT_AGP_ADVISORIES"
+          )"
+
+          if [ "$LINT_ACTIONABLE_WARNINGS" -lt 0 ]; then
+            LINT_ACTIONABLE_WARNINGS=0
+          fi
+        fi
+
+        LINT_ADVISORIES="$(
+          expr \
+            "$LINT_DEPENDENCY_ADVISORIES" \
+            + "$LINT_AGP_ADVISORIES"
+        )"
+
+        echo "ANDROID_LINT_TOTAL=$LINT_TOTAL"
+        echo "ANDROID_LINT_ERRORS=$LINT_ERRORS"
+        echo "ANDROID_LINT_FATALS=$LINT_FATALS"
+        echo "ANDROID_LINT_WARNINGS=$LINT_WARNINGS"
+        echo "ANDROID_LINT_DEPENDENCY_ADVISORIES=$LINT_DEPENDENCY_ADVISORIES"
+        echo "ANDROID_LINT_AGP_ADVISORIES=$LINT_AGP_ADVISORIES"
+        echo "ANDROID_LINT_ADVISORIES=$LINT_ADVISORIES"
+        echo "ANDROID_LINT_ACTIONABLE_WARNINGS=$LINT_ACTIONABLE_WARNINGS"
+
+        echo
+        echo "===== ANDROID LINT ISSUE IDS ====="
+
+        if [ "$LINT_REPORT_OK" -eq 1 ]; then
+          grep -o 'id="[^"]*"' "$LINT_XML" \
+            | sort \
+            | uniq -c \
+            || true
+        fi
+
+        echo
         echo "===== QUALITY SUMMARY ====="
 
         echo "UNIT_TESTS=PASS"
@@ -179,7 +291,25 @@ steps:
 
         echo "DETEKT_GATE=$DETEKT_GATE"
 
-        if [ "$DETEKT_GATE" != "PASS" ]; then
+        ANDROID_LINT_GATE="PASS"
+
+        if [ "$LINT_REPORT_OK" -ne 1 ] ||
+           [ "$ANDROID_LINT_RC" -ne 0 ] ||
+           [ "$LINT_ERRORS" -ne 0 ] ||
+           [ "$LINT_FATALS" -ne 0 ] ||
+           [ "$LINT_ACTIONABLE_WARNINGS" -ne 0 ]; then
+          ANDROID_LINT_GATE="FAIL"
+        fi
+
+        echo "ANDROID_LINT_ERRORS=$LINT_ERRORS"
+        echo "ANDROID_LINT_FATALS=$LINT_FATALS"
+        echo "ANDROID_LINT_ACTIONABLE_WARNINGS=$LINT_ACTIONABLE_WARNINGS"
+        echo "ANDROID_LINT_DEPENDENCY_ADVISORIES=$LINT_DEPENDENCY_ADVISORIES"
+        echo "ANDROID_LINT_AGP_ADVISORIES=$LINT_AGP_ADVISORIES"
+        echo "ANDROID_LINT_GATE=$ANDROID_LINT_GATE"
+
+        if [ "$DETEKT_GATE" != "PASS" ] ||
+           [ "$ANDROID_LINT_GATE" != "PASS" ]; then
           echo
           echo "ANDROID_QUALITY_GATE=FAIL"
           exit 1
