@@ -208,7 +208,9 @@ steps:
 
         if [ "$LINT_REPORT_OK" -eq 1 ]; then
           LINT_TOTAL="$(
-            grep -c '<issue ' "$LINT_XML" || true
+            grep -o 'severity="[^"]*"' "$LINT_XML" \
+              | wc -l \
+              | tr -d ' '
           )"
 
           LINT_ERRORS="$(
