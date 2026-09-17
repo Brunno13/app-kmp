@@ -5,9 +5,9 @@ android-minSdk = "24"
 android-targetSdk = "36"
 
 # --- Versões Base (Stable) ---
-androidx-activity = "1.9.3"
-androidx-appcompat = "1.7.0"
-androidx-core = "1.15.0"
+androidx-activity = "1.13.0"
+androidx-appcompat = "1.8.0"
+androidx-core = "1.19.0"
 androidx-lifecycle = "2.8.3"
 biometric = "1.1.0"
 composeMultiplatform = "1.12.0"
