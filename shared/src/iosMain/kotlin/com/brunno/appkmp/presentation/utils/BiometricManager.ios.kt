@@ -3,31 +3,44 @@ package com.brunno.appkmp.presentation.utils
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import kotlinx.cinterop.ExperimentalForeignApi
-import platform.LocalAuthentication.*
-import platform.Foundation.*
+import platform.Foundation.localizedDescription
+import platform.LocalAuthentication.LAContext
+import platform.LocalAuthentication.LAPolicyDeviceOwnerAuthenticationWithBiometrics
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
 
 @OptIn(ExperimentalForeignApi::class)
-actual class BiometricManager {
-    actual fun isBiometricAvailable(): Boolean {
+private class IOSBiometricController : BiometricManager {
+
+    override fun isBiometricAvailable(): Boolean {
         val context = LAContext()
-        return context.canEvaluatePolicy(LAPolicyDeviceOwnerAuthenticationWithBiometrics, null)
+
+        return context.canEvaluatePolicy(
+            LAPolicyDeviceOwnerAuthenticationWithBiometrics,
+            null
+        )
     }
 
-    actual fun promptBiometricAuth(
+    override fun promptBiometricAuth(
         title: String,
         subtitle: String,
         onSuccess: () -> Unit,
         onFailed: (String) -> Unit
     ) {
         val context = LAContext()
-        context.evaluatePolicy(LAPolicyDeviceOwnerAuthenticationWithBiometrics, title) { success, error ->
+
+        context.evaluatePolicy(
+            LAPolicyDeviceOwnerAuthenticationWithBiometrics,
+            title
+        ) { success, error ->
             dispatch_async(dispatch_get_main_queue()) {
                 if (success) {
                     onSuccess()
                 } else {
-                    onFailed(error?.localizedDescription ?: "Falha na biometria")
+                    onFailed(
+                        error?.localizedDescription
+                            ?: "Falha na biometria"
+                    )
                 }
             }
         }
@@ -36,5 +49,7 @@ actual class BiometricManager {
 
 @Composable
 actual fun rememberBiometricManager(): BiometricManager {
-    return remember { BiometricManager() }
+    return remember {
+        IOSBiometricController()
+    }
 }

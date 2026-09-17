@@ -2,8 +2,9 @@ package com.brunno.appkmp.presentation.utils
 
 import androidx.compose.runtime.Composable
 
-expect class BiometricManager {
+interface BiometricManager {
     fun isBiometricAvailable(): Boolean
+
     fun promptBiometricAuth(
         title: String,
         subtitle: String,

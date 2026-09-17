@@ -8,9 +8,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 
-actual class BiometricManager(private val activity: FragmentActivity) {
+private class AndroidBiometricController(
+    private val activity: FragmentActivity
+) : BiometricManager {
 
-    actual fun isBiometricAvailable(): Boolean {
+    override fun isBiometricAvailable(): Boolean {
         val biometricManager =
             AndroidBiometricManager.from(activity)
 
@@ -23,25 +25,36 @@ actual class BiometricManager(private val activity: FragmentActivity) {
                 AndroidBiometricManager.BIOMETRIC_SUCCESS
     }
 
-    actual fun promptBiometricAuth(
+    override fun promptBiometricAuth(
         title: String,
         subtitle: String,
         onSuccess: () -> Unit,
         onFailed: (String) -> Unit
     ) {
         val executor = ContextCompat.getMainExecutor(activity)
-        val biometricPrompt = BiometricPrompt(activity, executor,
+
+        val biometricPrompt = BiometricPrompt(
+            activity,
+            executor,
             object : BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                override fun onAuthenticationSucceeded(
+                    result: BiometricPrompt.AuthenticationResult
+                ) {
                     onSuccess()
                 }
-                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+
+                override fun onAuthenticationError(
+                    errorCode: Int,
+                    errString: CharSequence
+                ) {
                     onFailed(errString.toString())
                 }
+
                 override fun onAuthenticationFailed() {
                     onFailed("Biometria não reconhecida.")
                 }
-            })
+            }
+        )
 
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
             .setTitle(title)
@@ -56,5 +69,8 @@ actual class BiometricManager(private val activity: FragmentActivity) {
 @Composable
 actual fun rememberBiometricManager(): BiometricManager {
     val context = LocalContext.current as FragmentActivity
-    return remember { BiometricManager(context) }
+
+    return remember {
+        AndroidBiometricController(context)
+    }
 }
