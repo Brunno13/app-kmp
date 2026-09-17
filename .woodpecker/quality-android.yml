@@ -190,6 +190,8 @@ steps:
           echo "===== ANDROID LINT TEXT REPORT ====="
 
           cat "$LINT_TXT"
+        else
+          echo "INFO: Android Lint text report not found"
         fi
 
         echo
@@ -201,11 +203,12 @@ steps:
         LINT_WARNINGS=0
         LINT_DEPENDENCY_ADVISORIES=0
         LINT_AGP_ADVISORIES=0
+        LINT_ADVISORIES=0
         LINT_ACTIONABLE_WARNINGS=0
 
         if [ "$LINT_REPORT_OK" -eq 1 ]; then
           LINT_TOTAL="$(
-            grep -c '<issue' "$LINT_XML" || true
+            grep -c '<issue ' "$LINT_XML" || true
           )"
 
           LINT_ERRORS="$(
@@ -228,23 +231,14 @@ steps:
             grep -c 'id="AndroidGradlePluginVersion"' "$LINT_XML" || true
           )"
 
-          LINT_ACTIONABLE_WARNINGS="$(
-            expr \
-              "$LINT_WARNINGS" \
-              - "$LINT_DEPENDENCY_ADVISORIES" \
-              - "$LINT_AGP_ADVISORIES"
-          )"
+          LINT_ACTIONABLE_WARNINGS=$((LINT_WARNINGS - LINT_DEPENDENCY_ADVISORIES - LINT_AGP_ADVISORIES))
 
           if [ "$LINT_ACTIONABLE_WARNINGS" -lt 0 ]; then
             LINT_ACTIONABLE_WARNINGS=0
           fi
         fi
 
-        LINT_ADVISORIES="$(
-          expr \
-            "$LINT_DEPENDENCY_ADVISORIES" \
-            + "$LINT_AGP_ADVISORIES"
-        )"
+        LINT_ADVISORIES=$((LINT_DEPENDENCY_ADVISORIES + LINT_AGP_ADVISORIES))
 
         echo "ANDROID_LINT_TOTAL=$LINT_TOTAL"
         echo "ANDROID_LINT_ERRORS=$LINT_ERRORS"
@@ -301,11 +295,13 @@ steps:
           ANDROID_LINT_GATE="FAIL"
         fi
 
+        echo "ANDROID_LINT_TOTAL=$LINT_TOTAL"
         echo "ANDROID_LINT_ERRORS=$LINT_ERRORS"
         echo "ANDROID_LINT_FATALS=$LINT_FATALS"
         echo "ANDROID_LINT_ACTIONABLE_WARNINGS=$LINT_ACTIONABLE_WARNINGS"
         echo "ANDROID_LINT_DEPENDENCY_ADVISORIES=$LINT_DEPENDENCY_ADVISORIES"
         echo "ANDROID_LINT_AGP_ADVISORIES=$LINT_AGP_ADVISORIES"
+        echo "ANDROID_LINT_ADVISORIES=$LINT_ADVISORIES"
         echo "ANDROID_LINT_GATE=$ANDROID_LINT_GATE"
 
         if [ "$DETEKT_GATE" != "PASS" ] ||
