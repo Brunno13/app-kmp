@@ -203,6 +203,12 @@ steps:
         LINT_WARNINGS=0
         LINT_DEPENDENCY_ADVISORIES=0
         LINT_AGP_ADVISORIES=0
+        LINT_NEWER_VERSION_ADVISORIES=0
+        LINT_OLD_TARGET_API=0
+        LINT_ALLOWED_OLD_TARGET_API=0
+        LINT_VERSION_ADVISORIES=0
+        ANDROID_TARGET_SDK=""
+        ANDROID_TARGET_POLICY="FAIL"
         LINT_ADVISORIES=0
         LINT_ACTIONABLE_WARNINGS=0
 
@@ -233,14 +239,44 @@ steps:
             grep -c 'id="AndroidGradlePluginVersion"' "$LINT_XML" || true
           )"
 
-          LINT_ACTIONABLE_WARNINGS=$((LINT_WARNINGS - LINT_DEPENDENCY_ADVISORIES - LINT_AGP_ADVISORIES))
+          LINT_NEWER_VERSION_ADVISORIES="$(
+            grep -c 'id="NewerVersionAvailable"' "$LINT_XML" || true
+          )"
 
-          if [ "$LINT_ACTIONABLE_WARNINGS" -lt 0 ]; then
-            LINT_ACTIONABLE_WARNINGS=0
-          fi
+          LINT_OLD_TARGET_API="$(
+            grep -c 'id="OldTargetApi"' "$LINT_XML" || true
+          )"
         fi
 
-        LINT_ADVISORIES=$((LINT_DEPENDENCY_ADVISORIES + LINT_AGP_ADVISORIES))
+        ANDROID_TARGET_SDK="$(
+          sed -n \
+            's/^[[:space:]]*android-targetSdk[[:space:]]*=[[:space:]]*"\([0-9][0-9]*\)".*/\1/p' \
+            gradle/libs.versions.toml \
+            | head -n 1
+        )"
+
+        case "$ANDROID_TARGET_SDK" in
+          ''|*[!0-9]*)
+            ANDROID_TARGET_POLICY="FAIL"
+            ;;
+
+          *)
+            if [ "$ANDROID_TARGET_SDK" -ge 36 ]; then
+              ANDROID_TARGET_POLICY="PASS"
+              LINT_ALLOWED_OLD_TARGET_API="$LINT_OLD_TARGET_API"
+            else
+              ANDROID_TARGET_POLICY="FAIL"
+            fi
+            ;;
+        esac
+
+        LINT_VERSION_ADVISORIES=$((LINT_DEPENDENCY_ADVISORIES + LINT_AGP_ADVISORIES + LINT_NEWER_VERSION_ADVISORIES))
+        LINT_ADVISORIES=$((LINT_VERSION_ADVISORIES + LINT_ALLOWED_OLD_TARGET_API))
+        LINT_ACTIONABLE_WARNINGS=$((LINT_WARNINGS - LINT_ADVISORIES))
+
+        if [ "$LINT_ACTIONABLE_WARNINGS" -lt 0 ]; then
+          LINT_ACTIONABLE_WARNINGS=0
+        fi
 
         echo "ANDROID_LINT_TOTAL=$LINT_TOTAL"
         echo "ANDROID_LINT_ERRORS=$LINT_ERRORS"
@@ -248,6 +284,11 @@ steps:
         echo "ANDROID_LINT_WARNINGS=$LINT_WARNINGS"
         echo "ANDROID_LINT_DEPENDENCY_ADVISORIES=$LINT_DEPENDENCY_ADVISORIES"
         echo "ANDROID_LINT_AGP_ADVISORIES=$LINT_AGP_ADVISORIES"
+        echo "ANDROID_LINT_NEWER_VERSION_ADVISORIES=$LINT_NEWER_VERSION_ADVISORIES"
+        echo "ANDROID_LINT_VERSION_ADVISORIES=$LINT_VERSION_ADVISORIES"
+        echo "ANDROID_LINT_OLD_TARGET_API=$LINT_OLD_TARGET_API"
+        echo "ANDROID_TARGET_SDK=$ANDROID_TARGET_SDK"
+        echo "ANDROID_TARGET_POLICY=$ANDROID_TARGET_POLICY"
         echo "ANDROID_LINT_ADVISORIES=$LINT_ADVISORIES"
         echo "ANDROID_LINT_ACTIONABLE_WARNINGS=$LINT_ACTIONABLE_WARNINGS"
 
@@ -293,6 +334,7 @@ steps:
            [ "$ANDROID_LINT_RC" -ne 0 ] ||
            [ "$LINT_ERRORS" -ne 0 ] ||
            [ "$LINT_FATALS" -ne 0 ] ||
+           [ "$ANDROID_TARGET_POLICY" != "PASS" ] ||
            [ "$LINT_ACTIONABLE_WARNINGS" -ne 0 ]; then
           ANDROID_LINT_GATE="FAIL"
         fi
@@ -303,6 +345,11 @@ steps:
         echo "ANDROID_LINT_ACTIONABLE_WARNINGS=$LINT_ACTIONABLE_WARNINGS"
         echo "ANDROID_LINT_DEPENDENCY_ADVISORIES=$LINT_DEPENDENCY_ADVISORIES"
         echo "ANDROID_LINT_AGP_ADVISORIES=$LINT_AGP_ADVISORIES"
+        echo "ANDROID_LINT_NEWER_VERSION_ADVISORIES=$LINT_NEWER_VERSION_ADVISORIES"
+        echo "ANDROID_LINT_VERSION_ADVISORIES=$LINT_VERSION_ADVISORIES"
+        echo "ANDROID_LINT_OLD_TARGET_API=$LINT_OLD_TARGET_API"
+        echo "ANDROID_TARGET_SDK=$ANDROID_TARGET_SDK"
+        echo "ANDROID_TARGET_POLICY=$ANDROID_TARGET_POLICY"
         echo "ANDROID_LINT_ADVISORIES=$LINT_ADVISORIES"
         echo "ANDROID_LINT_GATE=$ANDROID_LINT_GATE"
 
