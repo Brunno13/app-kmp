@@ -6,7 +6,7 @@ import com.brunno.appkmp.domain.error.AuthError
 import com.brunno.appkmp.domain.error.NetworkError
 import io.ktor.client.plugins.ResponseException
 import io.ktor.client.statement.bodyAsText
-import io.ktor.utils.io.errors.IOException
+import kotlinx.io.IOException
 import kotlinx.serialization.json.Json
 import io.ktor.client.plugins.ServerResponseException
 import io.ktor.http.HttpStatusCode
