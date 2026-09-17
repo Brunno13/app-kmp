@@ -51,7 +51,6 @@ val networkModule = module {
                     if (!setCookies.isNullOrEmpty()) {
                         val parsedCookies = setCookies.joinToString("; ") { it.substringBefore(";") }
                         settings.putString("api_cookies", parsedCookies)
-                        println("🍪 COOKIES CAPTURADOS DO SERVIDOR: $parsedCookies")
                     }
                 }
 
@@ -63,6 +62,7 @@ val networkModule = module {
                         if (status == HttpStatusCode.Unauthorized || status == HttpStatusCode.Forbidden) {
                             println("🔒 Sessão expirada/inválida detetada no Ktor. Forçando logout local...")
                             settings.remove("auth_token")
+                            settings.remove("api_cookies")
                             userDao.clearSession()
                             sessionDao.clearAll()
                         }
