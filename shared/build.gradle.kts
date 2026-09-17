@@ -8,8 +8,9 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
 
-    // Gerador de código (Necessário para o Room e Ktorfit)
+    // Geradores de código / persistência
     alias(libs.plugins.ksp)
+    alias(libs.plugins.room)
 
     alias(libs.plugins.kotlinx.serialization)
 
@@ -128,6 +129,10 @@ dependencies {
 
 ksp {
     arg("room.generateKotlin", "true")
+}
+
+room {
+    schemaDirectory("$projectDir/schemas")
 }
 
 extensions.configure<JacocoPluginExtension> {
