@@ -2,6 +2,7 @@ package com.brunno.appkmp.data.repository
 
 import com.brunno.appkmp.data.local.AuthCredentialStore
 import com.brunno.appkmp.data.local.SessionDao
+import com.brunno.appkmp.data.local.SessionEntity
 import com.brunno.appkmp.data.local.toDomain
 import com.brunno.appkmp.data.local.toEntity
 import com.brunno.appkmp.data.remote.AuthApi
@@ -10,6 +11,8 @@ import com.brunno.appkmp.data.remote.models.ChangePasswordRequest
 import com.brunno.appkmp.data.remote.models.RevokeSessionRequest
 import com.brunno.appkmp.domain.error.AppError
 import com.brunno.appkmp.domain.error.AppResult
+import com.brunno.appkmp.domain.error.AuthError
+import com.brunno.appkmp.domain.model.ActiveSessionInfo
 import com.brunno.appkmp.domain.repository.SecurityRepository
 import com.russhwolf.settings.Settings
 import kotlinx.coroutines.flow.Flow
@@ -43,11 +46,24 @@ class SecurityRepositoryImpl(
         )
     }
 
-    override fun getCurrentToken(): String? =
-        credentialStore.getAuthToken()
+    override fun isCurrentSession(
+        sessionId: String
+    ): Boolean {
+        val currentToken =
+            credentialStore.getAuthToken()
+
+        val sessionToken =
+            credentialStore.getSessionToken(
+                sessionId
+            )
+
+        return currentToken != null &&
+            sessionToken != null &&
+            currentToken == sessionToken
+    }
 
     override fun observeActiveSessions():
-            Flow<List<ActiveSession>> {
+            Flow<List<ActiveSessionInfo>> {
         return sessionDao
             .observeAllSessions()
             .map { entities ->
@@ -60,13 +76,32 @@ class SecurityRepositoryImpl(
     override suspend fun syncActiveSessions():
             AppResult<Unit, AppError> {
         return executeRepositoryCall {
-            val sessions = api.listSessions()
+            val remoteSessions =
+                api.listSessions()
+
+            val synchronizedSessions =
+                remoteSessions.mapNotNull {
+                    session ->
+                    session.toSynchronizedSession()
+                }
+
+            credentialStore.replaceSessionTokens(
+                emptyMap()
+            )
 
             sessionDao.clearAll()
 
             sessionDao.insertAll(
-                sessions.mapNotNull { session ->
-                    session.toEntity()
+                synchronizedSessions.map {
+                    it.entity
+                }
+            )
+
+            credentialStore.replaceSessionTokens(
+                synchronizedSessions.associate {
+                    synchronized ->
+                    synchronized.sessionId to
+                        synchronized.token
                 }
             )
 
@@ -75,14 +110,27 @@ class SecurityRepositoryImpl(
     }
 
     override suspend fun revokeSession(
-        token: String
+        sessionId: String
     ): AppResult<Unit, AppError> {
+        val token =
+            credentialStore.getSessionToken(
+                sessionId
+            ) ?: return AppResult.Error(
+                AuthError.UNAUTHORIZED
+            )
+
         return executeRepositoryCall {
             api.revokeSession(
                 RevokeSessionRequest(token)
             )
 
-            sessionDao.deleteByToken(token)
+            credentialStore.removeSessionToken(
+                sessionId
+            )
+
+            sessionDao.deleteById(
+                sessionId
+            )
 
             AppResult.Success(Unit)
         }
@@ -102,5 +150,32 @@ class SecurityRepositoryImpl(
 
             AppResult.Success(Unit)
         }
+    }
+}
+
+private data class SynchronizedSession(
+    val sessionId: String,
+    val token: String,
+    val entity: SessionEntity
+)
+
+private fun ActiveSession.toSynchronizedSession():
+        SynchronizedSession? {
+    val actualSessionId = id
+    val actualToken = token
+    val sessionEntity = toEntity()
+
+    return if (
+        actualSessionId != null &&
+        actualToken != null &&
+        sessionEntity != null
+    ) {
+        SynchronizedSession(
+            sessionId = actualSessionId,
+            token = actualToken,
+            entity = sessionEntity
+        )
+    } else {
+        null
     }
 }

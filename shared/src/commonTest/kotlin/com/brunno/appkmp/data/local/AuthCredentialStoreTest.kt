@@ -11,7 +11,9 @@ class AuthCredentialStoreTest {
     @Test
     fun authTokenCanBeStoredAndRead() {
         val store =
-            SettingsAuthCredentialStore(MapSettings())
+            SettingsAuthCredentialStore(
+                MapSettings()
+            )
 
         store.setAuthToken("auth-token")
 
@@ -24,18 +26,24 @@ class AuthCredentialStoreTest {
     @Test
     fun authTokenCanBeRemoved() {
         val store =
-            SettingsAuthCredentialStore(MapSettings())
+            SettingsAuthCredentialStore(
+                MapSettings()
+            )
 
         store.setAuthToken("auth-token")
         store.removeAuthToken()
 
-        assertNull(store.getAuthToken())
+        assertNull(
+            store.getAuthToken()
+        )
     }
 
     @Test
     fun apiCookiesCanBeStoredAndRead() {
         val store =
-            SettingsAuthCredentialStore(MapSettings())
+            SettingsAuthCredentialStore(
+                MapSettings()
+            )
 
         store.setApiCookies(
             "session=value; other=value"
@@ -50,34 +58,192 @@ class AuthCredentialStoreTest {
     @Test
     fun apiCookiesCanBeRemoved() {
         val store =
-            SettingsAuthCredentialStore(MapSettings())
+            SettingsAuthCredentialStore(
+                MapSettings()
+            )
 
-        store.setApiCookies("session=value")
+        store.setApiCookies(
+            "session=value"
+        )
+
         store.removeApiCookies()
 
-        assertNull(store.getApiCookies())
+        assertNull(
+            store.getApiCookies()
+        )
+    }
+
+    @Test
+    fun sessionTokensCanBeStoredAndRead() {
+        val store =
+            SettingsAuthCredentialStore(
+                MapSettings()
+            )
+
+        store.replaceSessionTokens(
+            mapOf(
+                "session-1" to "token-1",
+                "session-2" to "token-2"
+            )
+        )
+
+        assertEquals(
+            "token-1",
+            store.getSessionToken(
+                "session-1"
+            )
+        )
+
+        assertEquals(
+            "token-2",
+            store.getSessionToken(
+                "session-2"
+            )
+        )
+    }
+
+    @Test
+    fun replacingSessionTokensRemovesObsoleteEntries() {
+        val store =
+            SettingsAuthCredentialStore(
+                MapSettings()
+            )
+
+        store.replaceSessionTokens(
+            mapOf(
+                "session-1" to "token-1",
+                "session-2" to "token-2"
+            )
+        )
+
+        store.replaceSessionTokens(
+            mapOf(
+                "session-2" to
+                    "token-2-updated",
+                "session-3" to "token-3"
+            )
+        )
+
+        assertNull(
+            store.getSessionToken(
+                "session-1"
+            )
+        )
+
+        assertEquals(
+            "token-2-updated",
+            store.getSessionToken(
+                "session-2"
+            )
+        )
+
+        assertEquals(
+            "token-3",
+            store.getSessionToken(
+                "session-3"
+            )
+        )
+    }
+
+    @Test
+    fun removeSessionTokenOnlyRemovesRequestedSession() {
+        val store =
+            SettingsAuthCredentialStore(
+                MapSettings()
+            )
+
+        store.setAuthToken(
+            "auth-token"
+        )
+
+        store.setApiCookies(
+            "session=value"
+        )
+
+        store.replaceSessionTokens(
+            mapOf(
+                "session-1" to "token-1",
+                "session-2" to "token-2"
+            )
+        )
+
+        store.removeSessionToken(
+            "session-1"
+        )
+
+        assertNull(
+            store.getSessionToken(
+                "session-1"
+            )
+        )
+
+        assertEquals(
+            "token-2",
+            store.getSessionToken(
+                "session-2"
+            )
+        )
+
+        assertEquals(
+            "auth-token",
+            store.getAuthToken()
+        )
+
+        assertEquals(
+            "session=value",
+            store.getApiCookies()
+        )
     }
 
     @Test
     fun clearRemovesCredentialsWithoutClearingOtherSettings() {
-        val settings = MapSettings().apply {
-            putString("theme_mode", "DARK")
-            putBoolean(
-                "biometric_enabled",
-                true
-            )
-        }
+        val settings =
+            MapSettings().apply {
+                putString(
+                    "theme_mode",
+                    "DARK"
+                )
+
+                putBoolean(
+                    "biometric_enabled",
+                    true
+                )
+            }
 
         val store =
-            SettingsAuthCredentialStore(settings)
+            SettingsAuthCredentialStore(
+                settings
+            )
 
-        store.setAuthToken("auth-token")
-        store.setApiCookies("session=value")
+        store.setAuthToken(
+            "auth-token"
+        )
+
+        store.setApiCookies(
+            "session=value"
+        )
+
+        store.replaceSessionTokens(
+            mapOf(
+                "session-1" to "token-1"
+            )
+        )
 
         store.clear()
 
-        assertNull(store.getAuthToken())
-        assertNull(store.getApiCookies())
+        assertNull(
+            store.getAuthToken()
+        )
+
+        assertNull(
+            store.getApiCookies()
+        )
+
+        assertNull(
+            store.getSessionToken(
+                "session-1"
+            )
+        )
 
         assertEquals(
             "DARK",
@@ -97,15 +263,19 @@ class AuthCredentialStoreTest {
 
     @Test
     fun encryptedAuthTokenIsNotStoredAsPlainText() {
-        val settings = MapSettings()
+        val settings =
+            MapSettings()
 
         val store =
             EncryptedSettingsAuthCredentialStore(
                 settings = settings,
-                cipher = FakeCredentialCipher()
+                cipher =
+                    FakeCredentialCipher()
             )
 
-        store.setAuthToken("auth-token")
+        store.setAuthToken(
+            "auth-token"
+        )
 
         assertEquals(
             "encrypted:auth-token",
@@ -122,15 +292,19 @@ class AuthCredentialStoreTest {
 
     @Test
     fun encryptedApiCookiesAreNotStoredAsPlainText() {
-        val settings = MapSettings()
+        val settings =
+            MapSettings()
 
         val store =
             EncryptedSettingsAuthCredentialStore(
                 settings = settings,
-                cipher = FakeCredentialCipher()
+                cipher =
+                    FakeCredentialCipher()
             )
 
-        store.setApiCookies("session=value")
+        store.setApiCookies(
+            "session=value"
+        )
 
         assertEquals(
             "encrypted:session=value",
@@ -146,21 +320,61 @@ class AuthCredentialStoreTest {
     }
 
     @Test
-    fun unreadableAuthTokenIsRemoved() {
-        val settings = MapSettings().apply {
-            putString(
-                "auth_token",
-                "invalid-value"
-            )
-        }
+    fun encryptedSessionTokensUseCredentialCipher() {
+        val settings =
+            MapSettings()
 
         val store =
             EncryptedSettingsAuthCredentialStore(
                 settings = settings,
-                cipher = FakeCredentialCipher()
+                cipher =
+                    FakeCredentialCipher()
             )
 
-        assertNull(store.getAuthToken())
+        store.replaceSessionTokens(
+            mapOf(
+                "session-1" to "token-1"
+            )
+        )
+
+        assertTrue(
+            settings
+                .getStringOrNull(
+                    "session_tokens"
+                )
+                ?.startsWith(
+                    "encrypted:"
+                ) == true
+        )
+
+        assertEquals(
+            "token-1",
+            store.getSessionToken(
+                "session-1"
+            )
+        )
+    }
+
+    @Test
+    fun unreadableAuthTokenIsRemoved() {
+        val settings =
+            MapSettings().apply {
+                putString(
+                    "auth_token",
+                    "invalid-value"
+                )
+            }
+
+        val store =
+            EncryptedSettingsAuthCredentialStore(
+                settings = settings,
+                cipher =
+                    FakeCredentialCipher()
+            )
+
+        assertNull(
+            store.getAuthToken()
+        )
 
         assertNull(
             settings.getStringOrNull(
@@ -171,20 +385,24 @@ class AuthCredentialStoreTest {
 
     @Test
     fun unreadableApiCookiesAreRemoved() {
-        val settings = MapSettings().apply {
-            putString(
-                "api_cookies",
-                "invalid-value"
-            )
-        }
+        val settings =
+            MapSettings().apply {
+                putString(
+                    "api_cookies",
+                    "invalid-value"
+                )
+            }
 
         val store =
             EncryptedSettingsAuthCredentialStore(
                 settings = settings,
-                cipher = FakeCredentialCipher()
+                cipher =
+                    FakeCredentialCipher()
             )
 
-        assertNull(store.getApiCookies())
+        assertNull(
+            store.getApiCookies()
+        )
 
         assertNull(
             settings.getStringOrNull(
@@ -194,28 +412,86 @@ class AuthCredentialStoreTest {
     }
 
     @Test
-    fun encryptedClearDoesNotClearOtherSettings() {
-        val settings = MapSettings().apply {
-            putString("theme_mode", "DARK")
-            putBoolean(
-                "biometric_enabled",
-                true
-            )
-        }
+    fun unreadableSessionTokensAreRemoved() {
+        val settings =
+            MapSettings().apply {
+                putString(
+                    "session_tokens",
+                    "invalid-value"
+                )
+            }
 
         val store =
             EncryptedSettingsAuthCredentialStore(
                 settings = settings,
-                cipher = FakeCredentialCipher()
+                cipher =
+                    FakeCredentialCipher()
             )
 
-        store.setAuthToken("auth-token")
-        store.setApiCookies("session=value")
+        assertNull(
+            store.getSessionToken(
+                "session-1"
+            )
+        )
+
+        assertNull(
+            settings.getStringOrNull(
+                "session_tokens"
+            )
+        )
+    }
+
+    @Test
+    fun encryptedClearDoesNotClearOtherSettings() {
+        val settings =
+            MapSettings().apply {
+                putString(
+                    "theme_mode",
+                    "DARK"
+                )
+
+                putBoolean(
+                    "biometric_enabled",
+                    true
+                )
+            }
+
+        val store =
+            EncryptedSettingsAuthCredentialStore(
+                settings = settings,
+                cipher =
+                    FakeCredentialCipher()
+            )
+
+        store.setAuthToken(
+            "auth-token"
+        )
+
+        store.setApiCookies(
+            "session=value"
+        )
+
+        store.replaceSessionTokens(
+            mapOf(
+                "session-1" to "token-1"
+            )
+        )
 
         store.clear()
 
-        assertNull(store.getAuthToken())
-        assertNull(store.getApiCookies())
+        assertNull(
+            store.getAuthToken()
+        )
+
+        assertNull(
+            store.getApiCookies()
+        )
+
+        assertNull(
+            store.getSessionToken(
+                "session-1"
+            )
+        )
 
         assertEquals(
             "DARK",
@@ -244,15 +520,22 @@ class AuthCredentialStoreTest {
         override fun decrypt(
             cipherText: String
         ): String? {
-            if (!cipherText.startsWith(PREFIX)) {
+            if (
+                !cipherText.startsWith(
+                    PREFIX
+                )
+            ) {
                 return null
             }
 
-            return cipherText.removePrefix(PREFIX)
+            return cipherText.removePrefix(
+                PREFIX
+            )
         }
 
         private companion object {
-            const val PREFIX = "encrypted:"
+            const val PREFIX =
+                "encrypted:"
         }
     }
 }

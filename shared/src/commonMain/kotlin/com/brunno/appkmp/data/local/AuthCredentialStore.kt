@@ -1,6 +1,9 @@
 package com.brunno.appkmp.data.local
 
 import com.russhwolf.settings.Settings
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 interface AuthCredentialStore {
     fun getAuthToken(): String?
@@ -14,6 +17,14 @@ interface AuthCredentialStore {
     fun setApiCookies(cookies: String)
 
     fun removeApiCookies()
+
+    fun getSessionToken(sessionId: String): String?
+
+    fun replaceSessionTokens(
+        tokensBySessionId: Map<String, String>
+    )
+
+    fun removeSessionToken(sessionId: String)
 
     fun clear()
 }
@@ -50,9 +61,39 @@ class SettingsAuthCredentialStore(
         settings.remove(PREF_API_COOKIES)
     }
 
+    override fun getSessionToken(
+        sessionId: String
+    ): String? =
+        readPlainSessionTokens(settings)[sessionId]
+
+    override fun replaceSessionTokens(
+        tokensBySessionId: Map<String, String>
+    ) {
+        writePlainSessionTokens(
+            settings = settings,
+            tokensBySessionId = tokensBySessionId
+        )
+    }
+
+    override fun removeSessionToken(
+        sessionId: String
+    ) {
+        val updated =
+            readPlainSessionTokens(settings)
+                .toMutableMap()
+
+        updated.remove(sessionId)
+
+        writePlainSessionTokens(
+            settings = settings,
+            tokensBySessionId = updated
+        )
+    }
+
     override fun clear() {
         removeAuthToken()
         removeApiCookies()
+        settings.remove(PREF_SESSION_TOKENS)
     }
 }
 
@@ -62,10 +103,16 @@ class EncryptedSettingsAuthCredentialStore(
 ) : AuthCredentialStore {
 
     override fun getAuthToken(): String? =
-        readEncrypted(PREF_AUTH_TOKEN)
+        readEncrypted(
+            settings = settings,
+            cipher = cipher,
+            key = PREF_AUTH_TOKEN
+        )
 
     override fun setAuthToken(token: String) {
         writeEncrypted(
+            settings = settings,
+            cipher = cipher,
             key = PREF_AUTH_TOKEN,
             value = token
         )
@@ -76,10 +123,16 @@ class EncryptedSettingsAuthCredentialStore(
     }
 
     override fun getApiCookies(): String? =
-        readEncrypted(PREF_API_COOKIES)
+        readEncrypted(
+            settings = settings,
+            cipher = cipher,
+            key = PREF_API_COOKIES
+        )
 
     override fun setApiCookies(cookies: String) {
         writeEncrypted(
+            settings = settings,
+            cipher = cipher,
             key = PREF_API_COOKIES,
             value = cookies
         )
@@ -89,37 +142,186 @@ class EncryptedSettingsAuthCredentialStore(
         settings.remove(PREF_API_COOKIES)
     }
 
+    override fun getSessionToken(
+        sessionId: String
+    ): String? =
+        readEncryptedSessionTokens(
+            settings = settings,
+            cipher = cipher
+        )[sessionId]
+
+    override fun replaceSessionTokens(
+        tokensBySessionId: Map<String, String>
+    ) {
+        writeEncryptedSessionTokens(
+            settings = settings,
+            cipher = cipher,
+            tokensBySessionId = tokensBySessionId
+        )
+    }
+
+    override fun removeSessionToken(
+        sessionId: String
+    ) {
+        val updated =
+            readEncryptedSessionTokens(
+                settings = settings,
+                cipher = cipher
+            ).toMutableMap()
+
+        updated.remove(sessionId)
+
+        writeEncryptedSessionTokens(
+            settings = settings,
+            cipher = cipher,
+            tokensBySessionId = updated
+        )
+    }
+
     override fun clear() {
         removeAuthToken()
         removeApiCookies()
-    }
-
-    private fun readEncrypted(
-        key: String
-    ): String? {
-        val encrypted =
-            settings.getStringOrNull(key)
-                ?: return null
-
-        val decrypted = cipher.decrypt(encrypted)
-
-        if (decrypted == null) {
-            settings.remove(key)
-        }
-
-        return decrypted
-    }
-
-    private fun writeEncrypted(
-        key: String,
-        value: String
-    ) {
-        settings.putString(
-            key,
-            cipher.encrypt(value)
-        )
+        settings.remove(PREF_SESSION_TOKENS)
     }
 }
 
-private const val PREF_AUTH_TOKEN = "auth_token"
-private const val PREF_API_COOKIES = "api_cookies"
+private fun readEncrypted(
+    settings: Settings,
+    cipher: CredentialCipher,
+    key: String
+): String? {
+    val encrypted =
+        settings.getStringOrNull(key)
+            ?: return null
+
+    val decrypted = cipher.decrypt(encrypted)
+
+    if (decrypted == null) {
+        settings.remove(key)
+    }
+
+    return decrypted
+}
+
+private fun writeEncrypted(
+    settings: Settings,
+    cipher: CredentialCipher,
+    key: String,
+    value: String
+) {
+    settings.putString(
+        key,
+        cipher.encrypt(value)
+    )
+}
+
+private fun readPlainSessionTokens(
+    settings: Settings
+): Map<String, String> {
+    val serialized =
+        settings.getStringOrNull(
+            PREF_SESSION_TOKENS
+        )
+
+    val decoded =
+        serialized?.let {
+            decodeSessionTokens(it)
+        }
+
+    if (
+        serialized != null &&
+        decoded == null
+    ) {
+        settings.remove(
+            PREF_SESSION_TOKENS
+        )
+    }
+
+    return decoded.orEmpty()
+}
+
+private fun writePlainSessionTokens(
+    settings: Settings,
+    tokensBySessionId: Map<String, String>
+) {
+    if (tokensBySessionId.isEmpty()) {
+        settings.remove(PREF_SESSION_TOKENS)
+        return
+    }
+
+    settings.putString(
+        PREF_SESSION_TOKENS,
+        encodeSessionTokens(tokensBySessionId)
+    )
+}
+
+private fun readEncryptedSessionTokens(
+    settings: Settings,
+    cipher: CredentialCipher
+): Map<String, String> {
+    val serialized =
+        readEncrypted(
+            settings = settings,
+            cipher = cipher,
+            key = PREF_SESSION_TOKENS
+        )
+
+    val decoded =
+        serialized?.let {
+            decodeSessionTokens(it)
+        }
+
+    if (
+        serialized != null &&
+        decoded == null
+    ) {
+        settings.remove(
+            PREF_SESSION_TOKENS
+        )
+    }
+
+    return decoded.orEmpty()
+}
+
+private fun writeEncryptedSessionTokens(
+    settings: Settings,
+    cipher: CredentialCipher,
+    tokensBySessionId: Map<String, String>
+) {
+    if (tokensBySessionId.isEmpty()) {
+        settings.remove(PREF_SESSION_TOKENS)
+        return
+    }
+
+    writeEncrypted(
+        settings = settings,
+        cipher = cipher,
+        key = PREF_SESSION_TOKENS,
+        value = encodeSessionTokens(tokensBySessionId)
+    )
+}
+
+private fun encodeSessionTokens(
+    tokensBySessionId: Map<String, String>
+): String =
+    credentialJson.encodeToString(tokensBySessionId)
+
+private fun decodeSessionTokens(
+    serialized: String
+): Map<String, String>? =
+    runCatching {
+        credentialJson.decodeFromString<
+            Map<String, String>
+        >(serialized)
+    }.getOrNull()
+
+private val credentialJson = Json
+
+private const val PREF_AUTH_TOKEN =
+    "auth_token"
+
+private const val PREF_API_COOKIES =
+    "api_cookies"
+
+private const val PREF_SESSION_TOKENS =
+    "session_tokens"

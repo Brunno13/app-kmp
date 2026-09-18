@@ -61,8 +61,7 @@ val networkModule = module {
                         println("❌ STATUS: $status")
                         if (status == HttpStatusCode.Unauthorized || status == HttpStatusCode.Forbidden) {
                             println("🔒 Sessão expirada/inválida detetada no Ktor. Forçando logout local...")
-                            credentialStore.removeAuthToken()
-                            credentialStore.removeApiCookies()
+                            credentialStore.clear()
                             userDao.clearSession()
                             sessionDao.clearAll()
                         }

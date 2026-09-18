@@ -14,8 +14,8 @@ interface SessionDao {
     @Query("SELECT * FROM sessions")
     fun observeAllSessions(): Flow<List<SessionEntity>>
 
-    @Query("DELETE FROM sessions WHERE token = :token")
-    suspend fun deleteByToken(token: String)
+    @Query("DELETE FROM sessions WHERE id = :sessionId")
+    suspend fun deleteById(sessionId: String)
 
     @Query("DELETE FROM sessions")
     suspend fun clearAll()
