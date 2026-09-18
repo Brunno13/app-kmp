@@ -1,258 +1,494 @@
-# 📱 KMP App (Android & iOS)
+# App KMP
 
-A cross-platform mobile application (Android and iOS) built with **Kotlin Multiplatform (KMP)** and **Compose Multiplatform**. The project adopts the **MVVM (Model-View-ViewModel)** architecture and an **Offline-First** approach, ensuring smooth navigation without internet access and robust application state management.
+A base project for building **Android and iOS** mobile applications with **Kotlin Multiplatform (KMP)** and **Compose Multiplatform**.
 
-### 🚀 Key Features
-* **Authentication & Network:** Consumption of the `better-auth` API using **Ktorfit** (Retrofit-like syntax) for typed HTTP calls.
-* **Architecture (MVVM):** Clear separation of concerns using the official Jetpack ViewModel pattern for KMP and `StateFlow` for reactivity.
-* **Offline Persistence:** Reactive local database using **Room Multiplatform** as the Single Source of Truth.
-* **Security:** Encrypted native storage for session tokens (`EncryptedSharedPreferences` / `Keychain`) using **Multiplatform Settings**.
-* **Global Localization & UI:** Native i18n support (English/Portuguese) using **Compose Resources**, zero "magic strings", and centralized navigation constants.
-* **UI Feedback & Network Monitoring:** Real-time native network tracking (`ConnectivityManager` on Android, `NWPathMonitor` on iOS) powering a reactive edge-to-edge offline banner, alongside a centralized alert system (Animated Toasts, Modals, and Full-screen Fatal Errors) using a global handler.
-* **Robust Error Handling:** Strongly typed, domain-driven error management (`AppResult`/`AppError`) mapping network and authentication failures directly to localized UI states.
-* **Automated Testing:** Unit tests for native business rules and E2E visual flow automation with `Maestro`.
-* **Infrastructure & CI/CD:** Isolated environments (Staging and Production) with automated cross-builds via Woodpecker CI.
+The goal of this repository is to provide a modern, testable, and evolvable foundation for mobile applications, keeping as much UI, presentation logic, domain logic, persistence, and networking as possible inside the shared module, while leaving only truly platform-specific implementations in `androidMain` and `iosMain`.
+
+> **Backend:** this project uses [`api-bun`](https://github.com/Brunno13/api-bun) as the backend for authentication, profile, and session management flows.
 
 ---
 
-## 🗺️ Project Roadmap
+## Current status
 
-### ✅ Completed
-- [x] **Stack Definition:** Transition from React Native to the Kotlin Multiplatform (KMP) ecosystem.
-- [x] **Tool Mapping:** Adoption of Room (Database), Ktorfit (Network), and Koin (Dependency Injection).
-- [x] **Architecture Design:** Establishment of the MVVM pattern to replace FSD.
-- [x] **Initial Setup:** Base project initialization using KMP Wizard with Compose Multiplatform.
-- [x] **Dependency Management:** Configuration of `libs.versions.toml` with core libraries.
-- [x] **Dependency Injection:** Koin setup in `commonMain` to manage Repositories and ViewModels.
-- [x] **Navigation:** Implementation of the navigation engine for Tabs and Stacks.
-- [x] **Local Persistence:** Room Multiplatform database setup and entity schemas.
-- [x] **Network Layer:** Ktorfit configuration and API route mapping (`/sign-in`, etc).
-- [x] **Hybrid Repositories:** Priority logic implementation (fetch locally from Room or fetch from Ktorfit and save locally).
-- [x] **Flavors:** Environment variable configuration (Staging/Production) directly in Gradle Build Variants.
-- [x] **Authentication UI:** Development of login screens, active session management, and error mapping.
-- [x] **State Management:** ViewModel construction based on `StateFlow`.
-- [x] **Secure Storage:** Keychain (iOS) and EncryptedSharedPreferences (Android) configuration for authentication tokens.
-- [x] **Global Localization & Error Handling:** Implementation of Compose Resources for i18n (En/Pt), centralized navigation constants (`Routes`), and strongly typed error mapping (`AppError`) from Domain to UI.
-- [x] **Design System:** Creation of reusable visual components using Compose, including global theming (Colors, Shapes, Dimens) and shared widgets (`AppButton`, `AppTextField`, `MenuCard`).
-- [x] **User Preferences & Theming:** Global dynamic theme engine (Light/Dark/Auto) linked to multiplatform `Settings` and State hoisting at the app root level.
-- [x] **CI/CD Automation:** Woodpecker CI pipelines (`release` and `test`) running via local macOS agent, powered by Bash scripts mapping Gradle tasks for APK generation and Kotlin Native iOS compilation.
-- [x] **UI Feedback & Network Monitoring:** Implementation of a centralized, theme-aware alert system (Animated Toasts, Full-screen Errors, and Modals) and real-time native network state monitoring (Android `ConnectivityManager` & iOS `NWPathMonitor`) driving an edge-to-edge offline banner.
-- [x] **Native Integration:** Biometrics implementation via `expect/actual` (Face ID / Touch ID) linked with secure storage constraints.
+The technical foundation of the project is stabilized for both Android and iOS.
 
-### ⏳ Next Steps
-- [ ] **Unit Testing:** Implement comprehensive unit tests for ViewModels, Domain Use Cases, and Repositories.
-- [ ] **E2E Testing:** Creation of interactive test flows using Maestro scripts.
+| Area | Status |
+| --- | --- |
+| Kotlin Multiplatform / Compose Multiplatform | ✅ |
+| Android | ✅ |
+| iOS arm64 | ✅ |
+| Authentication | ✅ |
+| Profile and security | ✅ |
+| Biometrics | ✅ |
+| Active sessions / revocation | ✅ |
+| Local persistence with Room | ✅ |
+| Secure credential storage | ✅ |
+| Automated tests | ✅ |
+| Coverage gate | ✅ |
+| Detekt | ✅ |
+| CPD / duplication | ✅ baseline |
+| Android Lint | ✅ 0 actionable warnings |
+| Gitleaks | ✅ |
+| Self-hosted CI/CD | ✅ |
+| Android production build | ✅ |
+| iOS production build | ✅ |
+| Final functional validation on iOS | 🚧 final step |
 
----
+Latest validated baseline:
 
-### 🛠️ Tech Stack
-* **Framework:** Kotlin Multiplatform (KMP) + Compose Multiplatform
-* **Language:** Kotlin
-* **Dependency & Build Management:** Gradle (Version Catalogs `.toml` + KSP)
-* **Navigation:** Jetpack Navigation Compose Multiplatform
-* **Network & API:** Ktorfit + Ktor Client (with Kotlinx Serialization)
-* **Database & Offline-First:** Room Multiplatform + Bundled SQLite
-* **Global State & Lifecycle:** Jetpack ViewModel + StateFlow (Kotlin Coroutines)
-* **Dependency Injection:** Koin
-* **Security & Biometrics:** Multiplatform Settings (EncryptedSharedPreferences/Keychain) + Native APIs via `expect/actual`
-* **Forms & Validation:** StateFlow + Konform (Native validation)
-* **Resilience & Internationalization:** Compose Multiplatform Resources
-* **Automated Testing:** Kotest (Unit/Integration) + Maestro (Multiplatform E2E)
-* **UI Documentation:** Compose `@Preview` (Isolated on Android) / Showkase
-* **Architecture & Quality:** MVVM (Model-View-ViewModel) + Single Source of Truth
-* **CI/CD:** Woodpecker CI (Cross-builds via `./gradlew` and `xcodebuild`)
+- **99 tests**
+- **0 failures**
+- **0 errors**
+- business coverage gate **PASS**
+- Detekt `commonMain`: **0 findings**
+- Detekt `androidMain`: **0 findings**
+- Android Lint: **0 actionable warnings**
+- Android quality pipeline: **PASS**
+- macOS/iOS test pipeline: **PASS**
+- Android production build: **PASS**
+- iOS arm64 production build: **PASS**
 
 ---
 
-## 🏗️ Project Architecture
+## Platforms
 
-The project strictly follows the **MVVM (Model-View-ViewModel)** pattern adapted for **Kotlin Multiplatform (KMP)**. It focuses on a *Single Source of Truth* (Offline-First) and maximizes code sharing across platforms. The structure is organized into native entry points and a robust shared module containing UI, business logic, and data access.
+### Android
 
-The main folder structure is as follows:
+- `compileSdk`: **37**
+- `targetSdk`: **36**
+- `minSdk`: **24**
+- JVM toolchain: **17**
+- Shared UI with Compose Multiplatform
+- Secure storage using Android Keystore + AES-GCM
+- Room for local persistence
+
+### iOS
+
+- `iosArm64` target
+- `iosSimulatorArm64` target
+- Shared framework generated by the `shared` module
+- Integration with native Apple APIs through Kotlin/Native
+- Biometrics through `LocalAuthentication`
+- Production framework build validated
+
+---
+
+## Implemented features
+
+### Authentication
+
+- login
+- registration
+- password recovery
+- session persistence
+- logout
+- expired-session handling
+- local credential cleanup after `401` / `403`
+
+### Profile
+
+- profile view
+- profile editing
+- shared navigation between screens
+
+### Security
+
+- biometric enablement
+- biometric authentication
+- active session listing
+- current session identification
+- session revocation
+- current-session revocation with local logout
+- secure credential store
+- safe token and cookie removal
+
+### Local persistence
+
+- Room Multiplatform
+- versioned schema
+- database on **schema v2**
+- session metadata stored in Room
+- session tokens stored **outside the database**
+- credentials centralized through `AuthCredentialStore`
+
+### Secure storage
+
+On Android:
+
+- AES-256/GCM
+- key protected by Android Keystore
+- individual IV for each encrypted value
+- tokens, cookies, and session tokens kept outside Room
+- automatic removal of invalid/corrupted values
+
+The credential architecture is abstracted in shared code, allowing platform-specific implementations.
+
+---
+
+## Architecture
+
+The project is organized into layers, keeping presentation, domain, and data responsibilities clearly separated.
 
 ```text
-/ (Project Root)
-├── androidApp/           # Native Android environment and entry points
-│   └── src/main/
-│       ├── AndroidManifest.xml # Android settings and entry point registration
-│       └── java/.../
-│           ├── AppApplication.kt # Global application class (Koin Android Context init)
-│           └── MainActivity.kt   # Android host activity and isolated Compose @Previews
-│
-├── iosApp/               # Native iOS environment and entry points (Xcode workspace)
-│   └── iosApp/
-│       └── iOSApp.swift  # iOS lifecycle and Koin initialization
-│
-└── shared/               # Core KMP module (100% shared business logic and UI)
-    └── src/
-        ├── androidMain/  # Android-specific expected implementations (expect/actual)
-        │   └── kotlin/.../di/PlatformModule.kt # Android Room Builder & EncryptedSharedPreferences
-        │
-        ├── iosMain/      # iOS-specific expected implementations (expect/actual)
-        │   └── kotlin/.../di/PlatformModule.kt # iOS Room Builder & Keychain Settings
-        │
-        └── commonMain/   # Shared Kotlin codebase
-            ├── composeResources/ # Global Localization (i18n XMLs) & Shared Assets
-            │
-            └── kotlin/com/brunno/appkmp/
-                ├── App.kt             # Compose Multiplatform Entry Point (NavHost)
-                │
-                ├── di/                # Dependency Injection Setup (Koin)
-                │   ├── KoinModule.kt      # Core module injection (ViewModels, Repositories, DB)
-                │   ├── NetworkModule.kt   # Ktorfit & Ktor HTTP client injection
-                │   └── PlatformModule.kt  # Expect/Actual definitions for native dependencies
-                │
-                ├── presentation/      # UI Layer & Presentation Logic
-                │   ├── theme/         # Design System (Theme.kt, Color.kt, Shape.kt, Dimens.kt)
-                │   ├── components/    # Reusable UI Widgets (AppButton, AppTextField, MenuCard, etc)
-                │   ├── navigation/    # Centralized routing constants (Routes.kt)
-                │   ├── screens/       # Compose Multiplatform Screens (Home, Login, Profile, etc)
-                │   ├── viewmodels/    # Jetpack ViewModels managing UI State (StateFlow)
-                │   └── utils/         # UI Helpers (e.g., ErrorMapper.kt for string mapping)
-                │
-                ├── domain/            # Core Business Rules (Independent of Frameworks)
-                │   ├── error/         # Strongly typed error handling (AppError, AppResult)
-                │   ├── models/        # Pure Kotlin Data Classes (Domain representations)
-                │   └── repository/    # Repository Interfaces (AuthRepository.kt)
-                │
-                └── data/              # Data Layer (Network, Local Storage, Repositories)
-                    ├── local/         # Offline-First Engine (Room Multiplatform)
-                    │   ├── AppDatabase.kt # SQLite Bundled Configuration
-                    │   ├── UserDao.kt     # Data Access Objects (SQL Queries)
-                    │   └── UserEntity.kt  # Room Table Schemas
-                    │
-                    ├── remote/        # Network Engine (Ktorfit)
-                    │   ├── AuthApi.kt     # API Interfaces (@POST, @GET)
-                    │   └── models/        # DTOs for JSON Serialization
-                    │
-                    └── repository/    # Hybrid Data Orchestration
-                        └── AuthRepositoryImpl.kt # Ktorfit + Room + Secure Storage integration
+UI / Compose
+    ↓
+ViewModels
+    ↓
+Domain / Repository contracts
+    ↓
+Repository implementations
+    ↓
+┌───────────────────────────────┐
+│ Remote API                    │
+│ Ktor + Ktorfit                │
+├───────────────────────────────┤
+│ Local storage                 │
+│ Room + Multiplatform Settings │
+├───────────────────────────────┤
+│ Platform security             │
+│ Android / iOS implementations │
+└───────────────────────────────┘
 ```
-### 📏 Architecture Guidelines
 
-To maintain clean, scalable, and loosely coupled code across platforms, we follow three basic rules based on MVVM and Clean Architecture:
+### Backend
 
-**1. Dependency Flow (Clean Architecture)**
-* **`presentation`** ➔ Can import from `domain`. (UI and ViewModels only interact with business rules and interfaces).
-* **`data`** ➔ Can import from `domain`. (Implements repository interfaces and maps remote/local data to pure models).
-* **`domain`** ➔ 100% Pure Kotlin. Must never import from `presentation` or `data` (Completely agnostic of UI, databases, or HTTP clients).
+```text
+app-kmp
+   │
+   │ Ktor / Ktorfit
+   ▼
+api-bun
+```
 
-**2. Layer Encapsulation (Inversion of Control)**
-* It is **strictly prohibited** for the UI or ViewModels to directly instantiate data sources, network clients, or repository implementations. Everything must be injected through Domain Interfaces using our DI tree (`Koin`).
-* ❌ *Wrong:* `val repository = AuthRepositoryImpl(api, dao)`
-* ✅ *Correct:* `val repository: AuthRepository = get()` (Injected transparently)
+Backend used by the project:
 
-**3. Smart Hybrid Persistence (Single Source of Truth)**
-* **Cache and Offline Mode:** The UI strictly observes the local database (`Room Multiplatform` + `Bundled SQLite`). The network (`Ktorfit`) updates the database in the background, and the database reactively updates the UI via `StateFlow`.
-* **Security:** Session tokens and sensitive keys are never saved in plain text or standard DBs. They are stored using device-native encryption (`Keychain` on iOS, `EncryptedSharedPreferences` on Android) abstracted via `expect/actual` or Multiplatform Settings.
+[`github.com/Brunno13/api-bun`](https://github.com/Brunno13/api-bun)
 
 ---
 
-## 🚀 How to Run and Build Locally
+## Main stack
 
-### Prerequisites
-* **Java Development Kit (JDK 17+)** installed.
-* **For Android:** Android Studio configured with a Virtual Device (Emulator) or a physical Android device connected.
-* **For iOS (macOS only):** Xcode installed, Command Line Tools configured, and the iOS Simulator active.
+| Technology | Current version |
+| --- | ---: |
+| Gradle | 9.5.1 |
+| Android Gradle Plugin | 9.3.1 |
+| Kotlin / KMP | 2.4.20 |
+| Compose Multiplatform | 1.12.0 |
+| KSP | 2.3.12 |
+| Room | 2.8.5 |
+| SQLite | 2.7.1 |
+| Koin | 4.2.2 |
+| Ktor | 3.5.2 |
+| Ktorfit | 2.7.5 |
+| Lifecycle | 2.11.0 |
+| Navigation Compose | 2.9.2 |
+| kotlinx.serialization | 1.11.0 |
+| Multiplatform Settings | 1.3.0 |
 
-### 💻 Development Mode (Live Reload & Debugging)
-
-Since this is a Kotlin Multiplatform project, the best development experience is achieved using **Android Studio** (with the KMP plugin) or **JetBrains Fleet**.
-
-1. **Android (Staging/Production):**
-    * Open the project in Android Studio.
-    * Select the `composeApp` run configuration.
-    * Choose your active Build Variant (e.g., `stagingDebug` or `productionDebug`).
-    * Click **Run** (Shift + F10) to deploy to the Emulator.
-    * *Alternatively, via CLI:*
-   
-      ```bash
-      ./gradlew :composeApp:installStagingDebug
-      ```
-
-2. **iOS:**
-    * Open the project in Android Studio and select the `iosApp` run configuration.
-    * *Alternatively, via Xcode:* Open `iosApp/iosApp.xcodeproj` in Xcode, select your target simulator, and click **Run** (Cmd + R).
-
-### 📦 Generating Binaries Locally
-Automated bash scripts detect the environment and configure local build tasks via Gradle. Ensure your scripts have execution permissions (`chmod +x scripts/*.sh`).
-
-#### 🤖 Android (APK Generation via Gradle)
-The script automatically selects the correct Gradle product flavor (`staging` or `production`) based on the environment variable.
-
-* **Generate Staging APK (Allows local HTTP APIs):**
-
-    ```bash
-    APP_ENV=staging ./scripts/build_android.sh
-    ```
-
-* **Generate Production APK (Requires secure HTTPS):**
-
-    ```bash
-    APP_ENV=production ./scripts/build_android.sh
-    ```
-  
-* **Result:** Files will be exported to the project root as `app-kmp-staging.apk` or `app-kmp-production.apk`.
-
-#### 🍎 iOS (Framework Generation via Kotlin Native)
-*Requires macOS*. The script runs the Kotlin Native compiler to link the Release Framework.
-
-* **Generate Staging iOS package:**
-
-    ```bash
-    APP_ENV=staging ./scripts/build_ios.sh
-    ```
-
-* **Generate Production iOS package:**
-
-    ```bash
-    APP_ENV=production ./scripts/build_ios.sh
-    ```
-  
-* **Result:** The compiled framework will be compressed and exported to the root as `app-kmp-ios-staging.zip` or `app-kmp-ios-production.zip`.
-
-### 🧪 Testing & Linting
-
-#### **Code Quality (Lint)**
-Run the linter to verify architecture and code formatting rules:
-
-
-    ./scripts/lint.sh
-
-
-#### **Unit & Integration Tests**
-Run the fast unit and integration tests across the shared Kotlin codebase:
-
-
-    ./scripts/test.sh
-
+> Ktor remains on `3.5.2` by deliberate compatibility decision with the version line currently used by Ktorfit. Dependencies are not upgraded merely to reduce version advisories.
 
 ---
 
-## 📦 CI/CD, Automation and Mirroring
+## Project structure
 
-The Woodpecker CI pipeline (`.woodpecker/release.yml`) automates APK/Framework generation, artifact packaging, and repository mirroring.
-
-**Release Pipeline Workflow:**
-1. **Trigger:** Creation of a Tag (e.g., `v1.0.5`) on Gitea starts the production pipeline.
-2. **Native Agent:** Execution occurs on a macOS agent (`darwin/arm64`) to enable Apple Silicon processing and iOS compilation.
-3. **Dual Compilation:**
-    * Injection of the `APP_ENV=production` variable.
-    * **Android:** Executes `./scripts/build_android.sh` to package the Release APK.
-    * **iOS:** Executes `./scripts/build_ios.sh` to compile the Kotlin Native framework.
-4. **Internal Release:** Woodpecker generates the git changelog, creates a versioned Release on the internal Gitea server, and attaches the compiled artifacts (`.apk` and `.zip`).
-5. **Mirroring (GitHub):** The source code associated with the Tag is forcibly pushed to GitHub, where an identical public Release is created via API, attaching the same binaries.
-
-**Staging Pipeline Workflow (`.woodpecker/test.yml`):**
-* Runs automatically on every push to the `main` branch.
-* Executes Linter and Unit Tests.
-* Ensures code health before any manual merges or production tags.
+```text
+app-kmp/
+├── androidApp/
+│   └── Android application / entry point
+│
+├── iosApp/
+│   └── iOS application / Xcode integration
+│
+├── shared/
+│   ├── src/commonMain/
+│   │   ├── data/
+│   │   ├── domain/
+│   │   ├── di/
+│   │   └── presentation/
+│   │
+│   ├── src/androidMain/
+│   │   └── Android-specific implementations
+│   │
+│   ├── src/iosMain/
+│   │   └── iOS-specific implementations
+│   │
+│   └── schemas/
+│       └── Versioned Room schemas
+│
+├── scripts/
+│   └── Build / automation scripts
+│
+├── .woodpecker/
+│   └── CI/CD pipelines
+│
+├── gradle/
+│   └── Version catalog and Gradle configuration
+│
+└── README.md
+```
 
 ---
 
-## 🔐 Security and Local Traffic
+## Development
 
-* **In Staging (`.staging` flavor):** The app allows cleartext HTTP traffic to enable communication with local development servers and staging APIs without SSL certificates.
-* **In Production:** Builds enforce secure HTTPS connections for all remote communications.
- 
+### Requirements
+
+For Android:
+
+- JDK 17
+- Android Studio
+- Android SDK compatible with the project
+
+For iOS:
+
+- macOS
+- Xcode
+- Kotlin/Native toolchain
+
+### Clone
+
+```bash
+git clone https://github.com/Brunno13/app-kmp.git
+cd app-kmp
+```
+
 ---
+
+## Tests
+
+### Android host tests
+
+macOS / Linux:
+
+```bash
+sh ./gradlew \
+  :shared:testAndroidHostTest
+```
+
+Windows:
+
+```powershell
+.\gradlew.bat :shared:testAndroidHostTest
+```
+
+Current baseline:
+
+```text
+TOTAL_TESTS=99
+TOTAL_FAILURES=0
+TOTAL_ERRORS=0
+TOTAL_SKIPPED=0
+```
+
+---
+
+## Quality gate
+
+The project maintains an incremental quality gate and avoids optimizing for artificial metrics.
+
+Current checks:
+
+- unit tests
+- business coverage
+- Detekt for `commonMain`
+- Detekt for `androidMain`
+- Android Lint
+- CPD in diagnostic mode
+- Gitleaks
+- Android build
+- iOS build / tests
+
+Principles:
+
+- do not pursue 100% coverage only for the metric;
+- do not create artificial abstractions only to reduce CPD;
+- do not turn version advisories into errors;
+- distinguish actionable warnings from tooling advisories;
+- add tools and gates incrementally;
+- preserve code clarity and behavior before pursuing "zero warnings".
+
+---
+
+## CI/CD
+
+Automation uses **self-hosted Woodpecker CI**.
+
+Current flow:
+
+```text
+Git push / Pull Request / Tag
+        │
+        ├── Linux / AMD64
+        │     ├── unit tests
+        │     ├── coverage
+        │     ├── Detekt
+        │     ├── Android Lint
+        │     ├── security checks
+        │     └── Android build
+        │
+        └── macOS
+              ├── KMP / iOS tests
+              ├── Kotlin/Native compile
+              ├── iOS arm64 framework
+              └── production package
+```
+
+The production pipeline already generates successfully:
+
+```text
+./app-kmp-production.apk
+./app-kmp-ios-production.zip
+```
+
+---
+
+## Roadmap
+
+### Multiplatform foundation
+
+- [x] Kotlin Multiplatform structure
+- [x] Shared UI with Compose Multiplatform
+- [x] Android target
+- [x] iOS target
+- [x] Shared navigation
+- [x] Dependency injection with Koin
+- [x] Networking with Ktor
+- [x] Declarative API with Ktorfit
+- [x] JSON serialization
+- [x] Multiplatform local persistence
+
+### Authentication and user
+
+- [x] Login
+- [x] Registration
+- [x] Password recovery
+- [x] Profile
+- [x] Profile editing
+- [x] Session persistence
+- [x] Logout
+- [x] Integration with the `api-bun` backend
+
+### Security
+
+- [x] Biometrics
+- [x] Security screen
+- [x] Active sessions
+- [x] Session revocation
+- [x] Current-session revocation
+- [x] Secure credential store
+- [x] Android Keystore + AES-GCM
+- [x] Tokens removed from Room
+- [x] Tokens removed from the UI
+- [x] Automatic cleanup after an invalid session
+
+### Persistence and data
+
+- [x] Room Multiplatform
+- [x] Schema export
+- [x] Versioned schema
+- [x] Room schema v2
+- [x] Session metadata stored locally
+- [x] Session tokens separated from metadata
+
+### Toolchain and compatibility
+
+- [x] Gradle 9
+- [x] AGP 9
+- [x] Kotlin / KMP 2.4
+- [x] Compose Multiplatform 1.12
+- [x] `compileSdk 37`
+- [x] `targetSdk 36`
+- [x] Room 2.8
+- [x] Koin 4.2
+- [x] Navigation 2.9
+- [x] Lifecycle 2.11
+- [x] kotlinx.serialization 1.11
+- [x] Multiplatform Settings 1.3
+- [x] Ktor 3.5.2
+- [ ] Review Ktor 3.6 when proper alignment with Ktorfit is available
+- [ ] Review future migration to Gradle 10
+- [ ] Review future `targetSdk` update when required
+
+### Code quality
+
+- [x] Unit testing
+- [x] Business coverage
+- [x] Coverage gate
+- [x] Detekt `commonMain`
+- [x] Detekt `androidMain`
+- [x] CPD / duplication
+- [x] Android Lint
+- [x] Android quality gate
+- [x] Gitleaks
+- [x] Android / JVM CI
+- [x] macOS / iOS CI
+- [x] Android production pipeline
+- [x] iOS production pipeline
+- [ ] Final functional validation on iOS
+- [ ] Final review of iOS-specific warnings
+
+### Future features
+
+- [ ] **Feature menu**
+- [ ] **Maps**
+- [ ] **Wallet**
+- [ ] **CarPlay / Android Auto**
+- [ ] **Push notifications**
+- [ ] **Google / Apple Calendar integration**
+
+---
+
+## Production artifacts
+
+### Android
+
+The production pipeline generates:
+
+```text
+app-kmp-production.apk
+```
+
+### iOS
+
+The production pipeline generates:
+
+```text
+app-kmp-ios-production.zip
+```
+
+The iOS package contains the shared framework:
+
+```text
+Shared.framework/
+├── Shared
+├── Headers/
+├── Modules/
+└── Info.plist
+```
+
+---
+
+## Current project state
+
+The current goal is not to turn this repository into a closed, application-specific product, but to keep it as a **solid multiplatform foundation** for incremental evolution.
+
+The architecture, authentication, security, persistence, testing, quality gates, and CI/CD foundations are already functional across both ecosystems.
+
+The immediate next technical step is to complete the **final functional validation on iOS**. After that, the project can evolve mainly through the features listed in the roadmap.
+
+---
+
+## Links
+
+- [Backend — api-bun](https://github.com/Brunno13/api-bun)
+- [Kotlin Multiplatform](https://kotlinlang.org/docs/multiplatform.html)
+- [Compose Multiplatform](https://www.jetbrains.com/compose-multiplatform/)
+- [Ktor](https://ktor.io/)
+- [Koin](https://insert-koin.io/)
+- [Room](https://developer.android.com/kotlin/multiplatform/room)
+
+---
+
+## Note
+
+This is an evolving base project. Library versions, platform targets, and tooling may change as the Kotlin Multiplatform ecosystem matures and new features are added.
