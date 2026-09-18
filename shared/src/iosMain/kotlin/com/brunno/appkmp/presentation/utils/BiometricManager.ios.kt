@@ -3,7 +3,6 @@ package com.brunno.appkmp.presentation.utils
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import kotlinx.cinterop.ExperimentalForeignApi
-import platform.Foundation.localizedDescription
 import platform.LocalAuthentication.LAContext
 import platform.LocalAuthentication.LAPolicyDeviceOwnerAuthenticationWithBiometrics
 import platform.darwin.dispatch_async
