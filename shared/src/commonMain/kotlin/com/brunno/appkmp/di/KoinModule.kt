@@ -37,7 +37,8 @@ val appModule = module {
             api = get(),
             dao = get(),
             sessionDao = get(),
-            settings = get()
+            settings = get(),
+            credentialStore = get()
         )
     }
 

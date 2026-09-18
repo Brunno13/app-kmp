@@ -32,7 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import com.brunno.appkmp.data.remote.models.ActiveSession
+import com.brunno.appkmp.domain.model.ActiveSessionInfo
 import com.brunno.appkmp.presentation.components.AppTextField
 import com.brunno.appkmp.presentation.components.AppTopBar
 import com.brunno.appkmp.presentation.components.MenuCard
@@ -121,8 +121,8 @@ fun SecurityScreen(
             ActiveSessionsSection(
                 activeSessions = activeSessions,
                 sessionErrorText = sessionError?.asString(),
-                onRevokeSession = { token ->
-                    viewModel.revokeSession(token) {
+                onRevokeSession = { sessionId ->
+                    viewModel.revokeSession(sessionId) {
                         authViewModel.logout {
                             onLogoutSuccess()
                         }
@@ -339,7 +339,7 @@ private fun BiometricSection(
 
 @Composable
 private fun ActiveSessionsSection(
-    activeSessions: List<ActiveSession>,
+    activeSessions: List<ActiveSessionInfo>,
     sessionErrorText: String?,
     onRevokeSession: (String) -> Unit
 ) {
@@ -383,7 +383,7 @@ private fun ActiveSessionsSection(
 
 @Composable
 private fun ActiveSessionCard(
-    session: ActiveSession,
+    session: ActiveSessionInfo,
     onRevokeSession: (String) -> Unit
 ) {
     val unknownDeviceText = stringResource(Res.string.label_unknown_device)
@@ -398,9 +398,7 @@ private fun ActiveSessionCard(
         trailingContent = {
             IconButton(
                 onClick = {
-                    session.token?.let { token ->
-                        onRevokeSession(token)
-                    }
+                    onRevokeSession(session.id)
                 }
             ) {
                 Icon(

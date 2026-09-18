@@ -33,16 +33,16 @@ kotlin {
         }
     }
 
-    androidLibrary {
+    android {
         namespace = "com.brunno.appkmp.shared"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
 
-        withAndroidTestOnJvmBuilder {
-            compilationName = "hostTest"
-            defaultSourceSetName = "androidHostTest"
-            sourceSetTreeName = "test"
-        }.configure {
+        androidResources {
+            enable = true
+        }
+
+        withHostTest {
             isIncludeAndroidResources = true
         }
     }
@@ -56,7 +56,6 @@ kotlin {
             implementation(libs.koin.android)
             implementation(libs.ktor.client.okhttp)
 
-            implementation(libs.androidxSecurityCrypto)
             implementation(libs.androidx.biometric)
         }
 

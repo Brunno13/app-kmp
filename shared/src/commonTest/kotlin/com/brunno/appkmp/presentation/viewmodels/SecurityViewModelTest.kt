@@ -1,6 +1,6 @@
 package com.brunno.appkmp.presentation.viewmodels
 
-import com.brunno.appkmp.data.remote.models.ActiveSession
+import com.brunno.appkmp.domain.model.ActiveSessionInfo
 import com.brunno.appkmp.domain.error.AppError
 import com.brunno.appkmp.domain.error.AppResult
 import com.brunno.appkmp.domain.error.AuthError
@@ -202,35 +202,50 @@ class SecurityViewModelTest {
         )
     }
 
+
     @Test
     fun activeSessionsReflectRepositoryUpdatesWhileSubscribed() = runTest {
-        val repository = FakeSecurityRepository()
-        val viewModel = SecurityViewModel(repository)
+        val repository =
+            FakeSecurityRepository()
+
+        val viewModel =
+            SecurityViewModel(repository)
 
         backgroundScope.launch(
-            UnconfinedTestDispatcher(testScheduler)
+            UnconfinedTestDispatcher(
+                testScheduler
+            )
         ) {
             viewModel.activeSessions.collect()
         }
 
         val sessions = listOf(
-            ActiveSession(
+            ActiveSessionInfo(
                 id = "session-1",
-                token = "token-1",
+                expiresAt = null,
+                createdAt = null,
+                updatedAt = null,
                 userId = "user-1",
-                ipAddress = "192.168.31.10",
-                userAgent = "Test Agent"
+                ipAddress =
+                    "192.168.31.10",
+                userAgent =
+                    "Test Agent"
             ),
-            ActiveSession(
+            ActiveSessionInfo(
                 id = "session-2",
-                token = "token-2",
+                expiresAt = null,
+                createdAt = null,
+                updatedAt = null,
                 userId = "user-1",
-                ipAddress = "192.168.31.11",
-                userAgent = "Other Agent"
+                ipAddress =
+                    "192.168.31.11",
+                userAgent =
+                    "Other Agent"
             )
         )
 
-        repository.activeSessionsFlow.value = sessions
+        repository.activeSessionsFlow.value =
+            sessions
 
         advanceUntilIdle()
 
@@ -240,18 +255,22 @@ class SecurityViewModelTest {
         )
     }
 
+
     @Test
     fun revokeOtherSessionDoesNotInvokeCurrentSessionCallback() = runTest {
-        val repository = FakeSecurityRepository(
-            currentTokenValue = "current-token"
-        )
+        val repository =
+            FakeSecurityRepository(
+                currentSessionId =
+                    "current-session"
+            )
 
-        val viewModel = SecurityViewModel(repository)
+        val viewModel =
+            SecurityViewModel(repository)
 
         var callbackCalls = 0
 
         viewModel.revokeSession(
-            token = "other-token"
+            sessionId = "other-session"
         ) {
             callbackCalls++
         }
@@ -264,8 +283,8 @@ class SecurityViewModelTest {
         )
 
         assertEquals(
-            "other-token",
-            repository.lastRevokeSessionToken
+            "other-session",
+            repository.lastRevokeSessionId
         )
 
         assertEquals(
@@ -279,19 +298,23 @@ class SecurityViewModelTest {
         )
     }
 
+
     @Test
     fun revokeCurrentSessionDisablesBiometricAndInvokesCallback() = runTest {
-        val repository = FakeSecurityRepository(
-            currentTokenValue = "current-token",
-            biometricEnabledValue = true
-        )
+        val repository =
+            FakeSecurityRepository(
+                currentSessionId =
+                    "current-session",
+                biometricEnabledValue = true
+            )
 
-        val viewModel = SecurityViewModel(repository)
+        val viewModel =
+            SecurityViewModel(repository)
 
         var callbackCalls = 0
 
         viewModel.revokeSession(
-            token = "current-token"
+            sessionId = "current-session"
         ) {
             callbackCalls++
         }
@@ -301,6 +324,11 @@ class SecurityViewModelTest {
         assertEquals(
             1,
             repository.revokeSessionCalls
+        )
+
+        assertEquals(
+            "current-session",
+            repository.lastRevokeSessionId
         )
 
         assertEquals(
@@ -324,22 +352,27 @@ class SecurityViewModelTest {
         )
     }
 
+
     @Test
     fun revokeSessionErrorDoesNotInvokeCallback() = runTest {
-        val repository = FakeSecurityRepository(
-            currentTokenValue = "current-token",
-            biometricEnabledValue = true,
-            revokeSessionResult = AppResult.Error(
-                NetworkError.SERVER_ERROR
+        val repository =
+            FakeSecurityRepository(
+                currentSessionId =
+                    "current-session",
+                biometricEnabledValue = true,
+                revokeSessionResult =
+                    AppResult.Error(
+                        NetworkError.SERVER_ERROR
+                    )
             )
-        )
 
-        val viewModel = SecurityViewModel(repository)
+        val viewModel =
+            SecurityViewModel(repository)
 
         var callbackCalls = 0
 
         viewModel.revokeSession(
-            token = "current-token"
+            sessionId = "current-session"
         ) {
             callbackCalls++
         }
@@ -388,25 +421,31 @@ class SecurityViewModelTest {
     }
 
     private class FakeSecurityRepository(
-        var biometricEnabledValue: Boolean = false,
-        var currentTokenValue: String? = null,
-        var syncActiveSessionsResult: AppResult<Unit, AppError> =
+        var biometricEnabledValue:
+            Boolean = false,
+        var currentSessionId:
+            String? = null,
+        var syncActiveSessionsResult:
+            AppResult<Unit, AppError> =
             AppResult.Success(Unit),
-        var revokeSessionResult: AppResult<Unit, AppError> =
+        var revokeSessionResult:
+            AppResult<Unit, AppError> =
             AppResult.Success(Unit),
-        var changePasswordResult: AppResult<Unit, AppError> =
+        var changePasswordResult:
+            AppResult<Unit, AppError> =
             AppResult.Success(Unit)
     ) : SecurityRepository {
 
         val activeSessionsFlow =
-            MutableStateFlow<List<ActiveSession>>(
-                emptyList()
-            )
+            MutableStateFlow<
+                List<ActiveSessionInfo>
+            >(emptyList())
 
         var setBiometricEnabledCalls = 0
             private set
 
-        var lastBiometricEnabledValue: Boolean? = null
+        var lastBiometricEnabledValue:
+            Boolean? = null
             private set
 
         var syncActiveSessionsCalls = 0
@@ -415,34 +454,42 @@ class SecurityViewModelTest {
         var revokeSessionCalls = 0
             private set
 
-        var lastRevokeSessionToken: String? = null
+        var lastRevokeSessionId:
+            String? = null
             private set
 
         var changePasswordCalls = 0
             private set
 
-        var lastCurrentPassword: String? = null
+        var lastCurrentPassword:
+            String? = null
             private set
 
-        var lastNewPassword: String? = null
+        var lastNewPassword:
+            String? = null
             private set
 
-        override fun isBiometricEnabled(): Boolean =
+        override fun isBiometricEnabled():
+                Boolean =
             biometricEnabledValue
 
         override fun setBiometricEnabled(
             enabled: Boolean
         ) {
             setBiometricEnabledCalls++
-            lastBiometricEnabledValue = enabled
-            biometricEnabledValue = enabled
+            lastBiometricEnabledValue =
+                enabled
+            biometricEnabledValue =
+                enabled
         }
 
-        override fun getCurrentToken(): String? =
-            currentTokenValue
+        override fun isCurrentSession(
+            sessionId: String
+        ): Boolean =
+            sessionId == currentSessionId
 
         override fun observeActiveSessions():
-                Flow<List<ActiveSession>> =
+                Flow<List<ActiveSessionInfo>> =
             activeSessionsFlow
 
         override suspend fun syncActiveSessions():
@@ -453,10 +500,11 @@ class SecurityViewModelTest {
         }
 
         override suspend fun revokeSession(
-            token: String
+            sessionId: String
         ): AppResult<Unit, AppError> {
             revokeSessionCalls++
-            lastRevokeSessionToken = token
+            lastRevokeSessionId =
+                sessionId
 
             return revokeSessionResult
         }
@@ -466,10 +514,13 @@ class SecurityViewModelTest {
             newPassword: String
         ): AppResult<Unit, AppError> {
             changePasswordCalls++
-            lastCurrentPassword = currentPassword
-            lastNewPassword = newPassword
+            lastCurrentPassword =
+                currentPassword
+            lastNewPassword =
+                newPassword
 
             return changePasswordResult
         }
     }
+
 }

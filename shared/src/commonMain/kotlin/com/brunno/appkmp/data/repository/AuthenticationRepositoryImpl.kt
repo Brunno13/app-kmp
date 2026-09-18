@@ -1,5 +1,6 @@
 package com.brunno.appkmp.data.repository
 
+import com.brunno.appkmp.data.local.AuthCredentialStore
 import com.brunno.appkmp.data.local.SessionDao
 import com.brunno.appkmp.data.local.UserDao
 import com.brunno.appkmp.data.local.UserEntity
@@ -19,12 +20,9 @@ class AuthenticationRepositoryImpl(
     private val api: AuthApi,
     private val dao: UserDao,
     private val sessionDao: SessionDao,
-    private val settings: Settings
+    private val settings: Settings,
+    private val credentialStore: AuthCredentialStore
 ) : AuthenticationRepository {
-
-    companion object {
-        private const val PREF_AUTH_TOKEN = "auth_token"
-    }
 
     private class InvalidSessionException : Exception()
 
@@ -86,6 +84,7 @@ class AuthenticationRepositoryImpl(
         } finally {
             dao.clearSession()
             sessionDao.clearAll()
+            credentialStore.clear()
             settings.clear()
         }
     }
@@ -99,10 +98,7 @@ class AuthenticationRepositoryImpl(
             throw InvalidSessionException()
         }
 
-        settings.putString(
-            PREF_AUTH_TOKEN,
-            actualToken
-        )
+        credentialStore.setAuthToken(actualToken)
 
         dao.clearSession()
 

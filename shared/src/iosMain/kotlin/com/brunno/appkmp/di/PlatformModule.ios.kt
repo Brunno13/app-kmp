@@ -3,6 +3,8 @@ package com.brunno.appkmp.di
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.brunno.appkmp.data.local.AppDatabase
+import com.brunno.appkmp.data.local.AuthCredentialStore
+import com.brunno.appkmp.data.local.SettingsAuthCredentialStore
 import com.brunno.appkmp.presentation.utils.IOSNetworkMonitor
 import com.brunno.appkmp.presentation.utils.NetworkMonitor
 import com.russhwolf.settings.ExperimentalSettingsImplementation
@@ -33,6 +35,10 @@ actual val platformModule = module {
 
     single<Settings> {
         KeychainSettings(service = "AppKmpSecureVault")
+    }
+
+    single<AuthCredentialStore> {
+        SettingsAuthCredentialStore(get())
     }
 
     single<NetworkMonitor> {

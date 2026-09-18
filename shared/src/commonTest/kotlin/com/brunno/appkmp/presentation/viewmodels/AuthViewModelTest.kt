@@ -1,7 +1,7 @@
 package com.brunno.appkmp.presentation.viewmodels
 
 import com.brunno.appkmp.data.local.UserEntity
-import com.brunno.appkmp.data.remote.models.ActiveSession
+import com.brunno.appkmp.domain.model.ActiveSessionInfo
 import com.brunno.appkmp.domain.error.AppError
 import com.brunno.appkmp.domain.error.AppResult
 import com.brunno.appkmp.domain.error.AuthError
@@ -611,7 +611,9 @@ class AuthViewModelTest {
             MutableStateFlow<UserEntity?>(null)
 
         private val activeSessionsFlow =
-            MutableStateFlow<List<ActiveSession>>(
+            MutableStateFlow<
+                List<ActiveSessionInfo>
+            >(
                 emptyList()
             )
 
@@ -663,11 +665,13 @@ class AuthViewModelTest {
                 Flow<UserEntity?> =
             currentUserFlow
 
-        override fun getCurrentToken(): String? =
-            null
+        override fun isCurrentSession(
+            sessionId: String
+        ): Boolean =
+            false
 
         override fun observeActiveSessions():
-                Flow<List<ActiveSession>> =
+                Flow<List<ActiveSessionInfo>> =
             activeSessionsFlow
 
         override suspend fun syncActiveSessions():
@@ -719,7 +723,7 @@ class AuthViewModelTest {
             AppResult.Success(Unit)
 
         override suspend fun revokeSession(
-            token: String
+            sessionId: String
         ): AppResult<Unit, AppError> =
             AppResult.Success(Unit)
 

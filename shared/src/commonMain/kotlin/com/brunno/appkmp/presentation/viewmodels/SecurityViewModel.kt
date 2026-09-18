@@ -72,14 +72,21 @@ class SecurityViewModel(
     }
 
     fun revokeSession(
-        token: String,
+        sessionId: String,
         onCurrentSessionRevoked: () -> Unit
     ) {
         viewModelScope.launch {
             val isCurrentSession =
-                token == securityRepository.getCurrentToken()
+                securityRepository.isCurrentSession(
+                    sessionId
+                )
 
-            when (val result = securityRepository.revokeSession(token)) {
+            when (
+                val result =
+                    securityRepository.revokeSession(
+                        sessionId
+                    )
+            ) {
                 is AppResult.Success -> {
                     _sessionError.value = null
 

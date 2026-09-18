@@ -1,6 +1,7 @@
 package com.brunno.appkmp.data.repository
 
 import com.brunno.appkmp.data.local.SessionDao
+import com.brunno.appkmp.data.local.SettingsAuthCredentialStore
 import com.brunno.appkmp.data.local.SessionEntity
 import com.brunno.appkmp.data.local.UserDao
 import com.brunno.appkmp.data.local.UserEntity
@@ -21,6 +22,7 @@ import com.brunno.appkmp.data.remote.models.UpdateUserRequest
 import com.brunno.appkmp.data.remote.models.UpdateUserResponse
 import com.brunno.appkmp.domain.error.AppResult
 import com.brunno.appkmp.domain.error.AuthError
+import com.brunno.appkmp.domain.model.ActiveSessionInfo
 import com.russhwolf.settings.MapSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,24 +40,49 @@ import kotlin.test.assertNull
 
 class AuthRepositoryImplTest {
 
-    @Test
-    fun currentTokenDefaultsToNull() {
-        val fixture = createFixture()
 
-        assertNull(fixture.repository.getCurrentToken())
+    @Test
+    fun currentSessionReturnsFalseWhenAuthTokenIsMissing() {
+        val fixture = createFixture(
+            initialSessionTokens = mapOf(
+                "session-1" to "session-token"
+            )
+        )
+
+        assertFalse(
+            fixture.repository.isCurrentSession(
+                "session-1"
+            )
+        )
     }
 
+
     @Test
-    fun currentTokenReturnsPersistedValue() {
+    fun currentSessionReturnsTrueWhenStoredTokensMatch() {
         val settings = MapSettings().apply {
-            putString("auth_token", "test-token")
+            putString(
+                "auth_token",
+                "test-token"
+            )
         }
 
-        val fixture = createFixture(settings = settings)
+        val fixture = createFixture(
+            settings = settings,
+            initialSessionTokens = mapOf(
+                "session-1" to "test-token"
+            )
+        )
 
-        assertEquals(
-            "test-token",
-            fixture.repository.getCurrentToken()
+        assertTrue(
+            fixture.repository.isCurrentSession(
+                "session-1"
+            )
+        )
+
+        assertFalse(
+            fixture.repository.isCurrentSession(
+                "missing-session"
+            )
         )
     }
 
@@ -250,6 +277,7 @@ class AuthRepositoryImplTest {
         assertFalse(settings.getBoolean("biometric_enabled", false))
     }
 
+
     @Test
     fun syncActiveSessionsReplacesLocalSessionsWithValidRemoteSessions() = runTest {
         val fixture = createFixture(
@@ -275,29 +303,61 @@ class AuthRepositoryImplTest {
             )
         )
 
-        val result = fixture.repository.syncActiveSessions()
+        val result =
+            fixture.repository.syncActiveSessions()
 
         assertIs<AppResult.Success<*>>(result)
 
-        assertEquals(1, fixture.api.listSessionsCalls)
-        assertEquals(1, fixture.sessionDao.clearAllCalls)
-        assertEquals(1, fixture.sessionDao.insertAllCalls)
-
         assertEquals(
-            listOf("token-1", "token-2"),
-            fixture.sessionDao.sessions.map { it.token }
+            1,
+            fixture.api.listSessionsCalls
         )
 
         assertEquals(
-            listOf("session-1", "session-2"),
-            fixture.sessionDao.sessions.map { it.id }
+            1,
+            fixture.sessionDao.clearAllCalls
+        )
+
+        assertEquals(
+            1,
+            fixture.sessionDao.insertAllCalls
+        )
+
+        assertEquals(
+            listOf(
+                "session-1",
+                "session-2"
+            ),
+            fixture.sessionDao.sessions.map {
+                it.id
+            }
+        )
+
+        assertEquals(
+            "token-1",
+            fixture.credentialStore.getSessionToken(
+                "session-1"
+            )
+        )
+
+        assertEquals(
+            "token-2",
+            fixture.credentialStore.getSessionToken(
+                "session-2"
+            )
+        )
+
+        assertNull(
+            fixture.credentialStore.getSessionToken(
+                "invalid-without-token"
+            )
         )
     }
+
 
     @Test
     fun syncActiveSessionsKeepsLocalStateWhenRemoteRequestFails() = runTest {
         val existingSession = SessionEntity(
-            token = "existing-token",
             id = "existing-session",
             expiresAt = null,
             createdAt = null,
@@ -308,33 +368,62 @@ class AuthRepositoryImplTest {
         )
 
         val fixture = createFixture(
-            initialSessions = listOf(existingSession),
-            listSessionsFailure = IllegalStateException("Remote failure")
+            initialSessions = listOf(
+                existingSession
+            ),
+            initialSessionTokens = mapOf(
+                "existing-session" to
+                    "existing-token"
+            ),
+            listSessionsFailure =
+                IllegalStateException(
+                    "Remote failure"
+                )
         )
 
-        val result = fixture.repository.syncActiveSessions()
+        val result =
+            fixture.repository.syncActiveSessions()
 
-        val error = assertIs<AppResult.Error<*>>(result)
+        val error =
+            assertIs<AppResult.Error<*>>(result)
 
         assertEquals(
             NetworkError.UNKNOWN,
             error.error
         )
 
-        assertEquals(1, fixture.api.listSessionsCalls)
-        assertEquals(0, fixture.sessionDao.clearAllCalls)
-        assertEquals(0, fixture.sessionDao.insertAllCalls)
+        assertEquals(
+            1,
+            fixture.api.listSessionsCalls
+        )
+
+        assertEquals(
+            0,
+            fixture.sessionDao.clearAllCalls
+        )
+
+        assertEquals(
+            0,
+            fixture.sessionDao.insertAllCalls
+        )
 
         assertEquals(
             listOf(existingSession),
             fixture.sessionDao.sessions
         )
+
+        assertEquals(
+            "existing-token",
+            fixture.credentialStore.getSessionToken(
+                "existing-session"
+            )
+        )
     }
+
 
     @Test
     fun revokeSessionRemovesOnlyRevokedSessionFromLocalState() = runTest {
         val session1 = SessionEntity(
-            token = "token-1",
             id = "session-1",
             expiresAt = null,
             createdAt = null,
@@ -345,7 +434,6 @@ class AuthRepositoryImplTest {
         )
 
         val session2 = SessionEntity(
-            token = "token-2",
             id = "session-2",
             expiresAt = null,
             createdAt = null,
@@ -356,33 +444,66 @@ class AuthRepositoryImplTest {
         )
 
         val fixture = createFixture(
-            initialSessions = listOf(session1, session2)
+            initialSessions = listOf(
+                session1,
+                session2
+            ),
+            initialSessionTokens = mapOf(
+                "session-1" to "token-1",
+                "session-2" to "token-2"
+            )
         )
 
-        val result = fixture.repository.revokeSession("token-1")
+        val result =
+            fixture.repository.revokeSession(
+                "session-1"
+            )
 
         assertIs<AppResult.Success<*>>(result)
 
-        assertEquals(1, fixture.api.revokeSessionCalls)
+        assertEquals(
+            1,
+            fixture.api.revokeSessionCalls
+        )
 
         assertEquals(
             RevokeSessionRequest("token-1"),
             fixture.api.lastRevokeSessionRequest
         )
 
-        assertEquals(1, fixture.sessionDao.deleteByTokenCalls)
-        assertEquals("token-1", fixture.sessionDao.lastDeletedToken)
+        assertEquals(
+            1,
+            fixture.sessionDao.deleteByIdCalls
+        )
+
+        assertEquals(
+            "session-1",
+            fixture.sessionDao.lastDeletedSessionId
+        )
 
         assertEquals(
             listOf(session2),
             fixture.sessionDao.sessions
         )
+
+        assertNull(
+            fixture.credentialStore.getSessionToken(
+                "session-1"
+            )
+        )
+
+        assertEquals(
+            "token-2",
+            fixture.credentialStore.getSessionToken(
+                "session-2"
+            )
+        )
     }
+
 
     @Test
     fun revokeSessionKeepsLocalStateWhenRemoteRequestFails() = runTest {
         val existingSession = SessionEntity(
-            token = "token-1",
             id = "session-1",
             expiresAt = null,
             createdAt = null,
@@ -393,28 +514,103 @@ class AuthRepositoryImplTest {
         )
 
         val fixture = createFixture(
-            initialSessions = listOf(existingSession),
-            revokeSessionFailure = IllegalStateException("Remote failure")
+            initialSessions = listOf(
+                existingSession
+            ),
+            initialSessionTokens = mapOf(
+                "session-1" to "token-1"
+            ),
+            revokeSessionFailure =
+                IllegalStateException(
+                    "Remote failure"
+                )
         )
 
-        val result = fixture.repository.revokeSession("token-1")
+        val result =
+            fixture.repository.revokeSession(
+                "session-1"
+            )
 
-        val error = assertIs<AppResult.Error<*>>(result)
+        val error =
+            assertIs<AppResult.Error<*>>(result)
 
         assertEquals(
             NetworkError.UNKNOWN,
             error.error
         )
 
-        assertEquals(1, fixture.api.revokeSessionCalls)
+        assertEquals(
+            1,
+            fixture.api.revokeSessionCalls
+        )
 
         assertEquals(
             RevokeSessionRequest("token-1"),
             fixture.api.lastRevokeSessionRequest
         )
 
-        assertEquals(0, fixture.sessionDao.deleteByTokenCalls)
-        assertNull(fixture.sessionDao.lastDeletedToken)
+        assertEquals(
+            0,
+            fixture.sessionDao.deleteByIdCalls
+        )
+
+        assertNull(
+            fixture.sessionDao.lastDeletedSessionId
+        )
+
+        assertEquals(
+            listOf(existingSession),
+            fixture.sessionDao.sessions
+        )
+
+        assertEquals(
+            "token-1",
+            fixture.credentialStore.getSessionToken(
+                "session-1"
+            )
+        )
+    }
+
+    @Test
+    fun revokeSessionReturnsUnauthorizedWhenSessionTokenIsMissing() = runTest {
+        val existingSession = SessionEntity(
+            id = "session-1",
+            expiresAt = null,
+            createdAt = null,
+            updatedAt = null,
+            ipAddress = null,
+            userAgent = null,
+            userId = "user-1"
+        )
+
+        val fixture = createFixture(
+            initialSessions = listOf(
+                existingSession
+            )
+        )
+
+        val result =
+            fixture.repository.revokeSession(
+                "session-1"
+            )
+
+        val error =
+            assertIs<AppResult.Error<*>>(result)
+
+        assertEquals(
+            AuthError.UNAUTHORIZED,
+            error.error
+        )
+
+        assertEquals(
+            0,
+            fixture.api.revokeSessionCalls
+        )
+
+        assertEquals(
+            0,
+            fixture.sessionDao.deleteByIdCalls
+        )
 
         assertEquals(
             listOf(existingSession),
@@ -933,37 +1129,50 @@ class AuthRepositoryImplTest {
         assertNull(observedUser)
     }
 
+
     @Test
     fun observeActiveSessionsMapsPersistedSessionsToDomain() = runTest {
         val fixture = createFixture(
             initialSessions = listOf(
                 SessionEntity(
-                    token = "token-1",
                     id = "session-1",
-                    expiresAt = "2026-10-01T10:00:00Z",
-                    createdAt = "2026-09-01T10:00:00Z",
-                    updatedAt = "2026-09-02T10:00:00Z",
-                    ipAddress = "192.168.31.10",
-                    userAgent = "Test Agent",
-                    userId = "user-1"
+                    expiresAt =
+                        "2026-10-01T10:00:00Z",
+                    createdAt =
+                        "2026-09-01T10:00:00Z",
+                    updatedAt =
+                        "2026-09-02T10:00:00Z",
+                    ipAddress =
+                        "192.168.31.10",
+                    userAgent =
+                        "Test Agent",
+                    userId =
+                        "user-1"
                 )
             )
         )
 
         val sessions =
-            fixture.repository.observeActiveSessions().first()
+            fixture.repository
+                .observeActiveSessions()
+                .first()
 
         assertEquals(
             listOf(
-                ActiveSession(
+                ActiveSessionInfo(
                     id = "session-1",
-                    expiresAt = "2026-10-01T10:00:00Z",
-                    token = "token-1",
-                    createdAt = "2026-09-01T10:00:00Z",
-                    updatedAt = "2026-09-02T10:00:00Z",
-                    ipAddress = "192.168.31.10",
-                    userAgent = "Test Agent",
-                    userId = "user-1"
+                    expiresAt =
+                        "2026-10-01T10:00:00Z",
+                    createdAt =
+                        "2026-09-01T10:00:00Z",
+                    updatedAt =
+                        "2026-09-02T10:00:00Z",
+                    ipAddress =
+                        "192.168.31.10",
+                    userAgent =
+                        "Test Agent",
+                    userId =
+                        "user-1"
                 )
             ),
             sessions
@@ -987,7 +1196,7 @@ class AuthRepositoryImplTest {
         )
 
         assertNull(
-            fixture.repository.getCurrentToken()
+            fixture.credentialStore.getAuthToken()
         )
     }
 
@@ -1009,7 +1218,7 @@ class AuthRepositoryImplTest {
         )
 
         assertNull(
-            fixture.repository.getCurrentToken()
+            fixture.credentialStore.getAuthToken()
         )
     }
 
@@ -1036,6 +1245,7 @@ class AuthRepositoryImplTest {
         sessionsResponse: List<ActiveSession> = emptyList(),
         listSessionsFailure: Exception? = null,
         initialSessions: List<SessionEntity> = emptyList(),
+        initialSessionTokens: Map<String, String> = emptyMap(),
         revokeSessionFailure: Exception? = null,
         updateUserResponse: UpdateUserResponse = UpdateUserResponse(),
         registerResponse: LoginResponse = LoginResponse(),
@@ -1076,11 +1286,19 @@ class AuthRepositoryImplTest {
             initialSessions = initialSessions
         )
 
+        val credentialStore =
+            SettingsAuthCredentialStore(settings)
+
+        credentialStore.replaceSessionTokens(
+            initialSessionTokens
+        )
+
         val repository = AuthRepositoryImpl(
             api = api,
             dao = userDao,
             sessionDao = sessionDao,
-            settings = settings
+            settings = settings,
+            credentialStore = credentialStore
         )
 
         return Fixture(
@@ -1088,6 +1306,7 @@ class AuthRepositoryImplTest {
             api = api,
             userDao = userDao,
             sessionDao = sessionDao,
+            credentialStore = credentialStore,
             settings = settings
         )
     }
@@ -1097,6 +1316,8 @@ class AuthRepositoryImplTest {
         val api: FakeAuthApi,
         val userDao: FakeUserDao,
         val sessionDao: FakeSessionDao,
+        val credentialStore:
+            SettingsAuthCredentialStore,
         val settings: MapSettings
     )
 
@@ -1308,13 +1529,14 @@ class AuthRepositoryImplTest {
     }
 
     private class FakeSessionDao(
-        initialSessions: List<SessionEntity> = emptyList()
+        initialSessions: List<SessionEntity> =
+            emptyList()
     ) : SessionDao {
 
-        var deleteByTokenCalls: Int = 0
+        var deleteByIdCalls: Int = 0
             private set
 
-        var lastDeletedToken: String? = null
+        var lastDeletedSessionId: String? = null
             private set
 
         private val sessionsFlow =
@@ -1336,15 +1558,20 @@ class AuthRepositoryImplTest {
             sessionsFlow.value = sessions
         }
 
-        override fun observeAllSessions(): Flow<List<SessionEntity>> =
+        override fun observeAllSessions():
+                Flow<List<SessionEntity>> =
             sessionsFlow
 
-        override suspend fun deleteByToken(token: String) {
-            deleteByTokenCalls++
-            lastDeletedToken = token
+        override suspend fun deleteById(
+            sessionId: String
+        ) {
+            deleteByIdCalls++
+            lastDeletedSessionId = sessionId
 
             sessionsFlow.value =
-                sessionsFlow.value.filterNot { it.token == token }
+                sessionsFlow.value.filterNot {
+                    it.id == sessionId
+                }
         }
 
         override suspend fun clearAll() {

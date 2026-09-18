@@ -1,10 +1,10 @@
 package com.brunno.appkmp.di
 
+import com.brunno.appkmp.data.local.AuthCredentialStore
 import com.brunno.appkmp.data.local.SessionDao
 import com.brunno.appkmp.data.local.UserDao
 import com.brunno.appkmp.data.remote.AuthApi
 import com.brunno.appkmp.data.remote.createAuthApi
-import com.russhwolf.settings.Settings
 import de.jensklingenberg.ktorfit.Ktorfit
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.ClientRequestException
@@ -23,7 +23,7 @@ import io.ktor.http.HttpStatusCode
 val networkModule = module {
 
     single {
-        val settings = get<Settings>()
+        val credentialStore = get<AuthCredentialStore>()
         val baseUrl = get<String>(named("baseUrl"))
         val userDao = get<UserDao>()
         val sessionDao = get<SessionDao>()
@@ -50,8 +50,7 @@ val networkModule = module {
                     val setCookies = response.headers.getAll("Set-Cookie")
                     if (!setCookies.isNullOrEmpty()) {
                         val parsedCookies = setCookies.joinToString("; ") { it.substringBefore(";") }
-                        settings.putString("api_cookies", parsedCookies)
-                        println("🍪 COOKIES CAPTURADOS DO SERVIDOR: $parsedCookies")
+                        credentialStore.setApiCookies(parsedCookies)
                     }
                 }
 
@@ -62,7 +61,7 @@ val networkModule = module {
                         println("❌ STATUS: $status")
                         if (status == HttpStatusCode.Unauthorized || status == HttpStatusCode.Forbidden) {
                             println("🔒 Sessão expirada/inválida detetada no Ktor. Forçando logout local...")
-                            settings.remove("auth_token")
+                            credentialStore.clear()
                             userDao.clearSession()
                             sessionDao.clearAll()
                         }
@@ -72,12 +71,12 @@ val networkModule = module {
         }
 
         client.requestPipeline.intercept(io.ktor.client.request.HttpRequestPipeline.State) {
-            val cookies = settings.getStringOrNull("api_cookies")
+            val cookies = credentialStore.getApiCookies()
             if (!cookies.isNullOrBlank()) {
                 context.headers.append("Cookie", cookies)
             }
 
-            val token = settings.getStringOrNull("auth_token")
+            val token = credentialStore.getAuthToken()
             if (!token.isNullOrBlank()) {
                 context.headers.append("Authorization", "Bearer $token")
             }
