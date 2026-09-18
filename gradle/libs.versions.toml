@@ -24,7 +24,6 @@ room = "2.8.5"
 sqlite = "2.7.1"
 
 multiplatformSettings = "1.1.1"
-securityCrypto = "1.1.0-alpha06"
 
 peekaboo = "0.5.2"
 detekt = "1.23.8"
@@ -74,7 +73,6 @@ ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version = "1.7.3" }
 
 multiplatformSettings = { module = "com.russhwolf:multiplatform-settings", version.ref = "multiplatformSettings" }
-androidxSecurityCrypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
 
 peekaboo-image-picker = { module = "io.github.onseok:peekaboo-image-picker", version.ref = "peekaboo" }
 

@@ -3,8 +3,6 @@ package com.brunno.appkmp.di
 import androidx.room.RoomDatabase
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.brunno.appkmp.data.local.AppDatabase
-import com.brunno.appkmp.data.local.AuthCredentialStore
-import com.brunno.appkmp.data.local.SettingsAuthCredentialStore
 import com.brunno.appkmp.data.repository.AuthRepositoryImpl
 import com.brunno.appkmp.domain.repository.AuthRepository
 import com.brunno.appkmp.presentation.utils.GlobalErrorHandler
@@ -33,10 +31,6 @@ val appModule = module {
 
     single { get<AppDatabase>().userDao() }
     single { get<AppDatabase>().sessionDao() }
-
-    single<AuthCredentialStore> {
-        SettingsAuthCredentialStore(get())
-    }
 
     single<AuthRepository> {
         AuthRepositoryImpl(
