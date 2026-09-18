@@ -1,5 +1,6 @@
 package com.brunno.appkmp.data.repository
 
+import com.brunno.appkmp.data.local.AuthCredentialStore
 import com.brunno.appkmp.data.local.SessionDao
 import com.brunno.appkmp.data.local.UserDao
 import com.brunno.appkmp.data.remote.AuthApi
@@ -13,13 +14,15 @@ class AuthRepositoryImpl(
     api: AuthApi,
     dao: UserDao,
     sessionDao: SessionDao,
-    settings: Settings
+    settings: Settings,
+    credentialStore: AuthCredentialStore
 ) : AuthRepository,
     AuthenticationRepository by AuthenticationRepositoryImpl(
         api = api,
         dao = dao,
         sessionDao = sessionDao,
-        settings = settings
+        settings = settings,
+        credentialStore = credentialStore
     ),
     ProfileRepository by ProfileRepositoryImpl(
         api = api,
@@ -28,5 +31,6 @@ class AuthRepositoryImpl(
     SecurityRepository by SecurityRepositoryImpl(
         api = api,
         sessionDao = sessionDao,
-        settings = settings
+        settings = settings,
+        credentialStore = credentialStore
     )

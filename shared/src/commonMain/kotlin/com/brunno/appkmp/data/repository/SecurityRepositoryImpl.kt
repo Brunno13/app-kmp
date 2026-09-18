@@ -1,5 +1,6 @@
 package com.brunno.appkmp.data.repository
 
+import com.brunno.appkmp.data.local.AuthCredentialStore
 import com.brunno.appkmp.data.local.SessionDao
 import com.brunno.appkmp.data.local.toDomain
 import com.brunno.appkmp.data.local.toEntity
@@ -17,11 +18,11 @@ import kotlinx.coroutines.flow.map
 class SecurityRepositoryImpl(
     private val api: AuthApi,
     private val sessionDao: SessionDao,
-    private val settings: Settings
+    private val settings: Settings,
+    private val credentialStore: AuthCredentialStore
 ) : SecurityRepository {
 
     companion object {
-        private const val PREF_AUTH_TOKEN = "auth_token"
         private const val PREF_BIOMETRIC_ENABLED =
             "biometric_enabled"
     }
@@ -42,11 +43,8 @@ class SecurityRepositoryImpl(
         )
     }
 
-    override fun getCurrentToken(): String? {
-        return settings.getStringOrNull(
-            PREF_AUTH_TOKEN
-        )
-    }
+    override fun getCurrentToken(): String? =
+        credentialStore.getAuthToken()
 
     override fun observeActiveSessions():
             Flow<List<ActiveSession>> {

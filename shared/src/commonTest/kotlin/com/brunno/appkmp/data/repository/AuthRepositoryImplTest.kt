@@ -1,6 +1,7 @@
 package com.brunno.appkmp.data.repository
 
 import com.brunno.appkmp.data.local.SessionDao
+import com.brunno.appkmp.data.local.SettingsAuthCredentialStore
 import com.brunno.appkmp.data.local.SessionEntity
 import com.brunno.appkmp.data.local.UserDao
 import com.brunno.appkmp.data.local.UserEntity
@@ -1076,11 +1077,15 @@ class AuthRepositoryImplTest {
             initialSessions = initialSessions
         )
 
+        val credentialStore =
+            SettingsAuthCredentialStore(settings)
+
         val repository = AuthRepositoryImpl(
             api = api,
             dao = userDao,
             sessionDao = sessionDao,
-            settings = settings
+            settings = settings,
+            credentialStore = credentialStore
         )
 
         return Fixture(
