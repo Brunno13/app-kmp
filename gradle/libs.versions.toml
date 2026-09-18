@@ -18,7 +18,7 @@ ksp = "2.3.12"
 koin = "4.0.0"
 ktor = "3.5.0"
 ktorfit = "2.7.5"
-navigationCompose = "2.8.0-alpha08"
+navigationCompose = "2.9.2"
 
 room = "2.8.5"
 sqlite = "2.7.1"
