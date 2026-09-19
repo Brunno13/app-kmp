@@ -1,0 +1,5 @@
+#include "Config.xcconfig"
+
+API_SCHEME = https
+API_HOST = api-bun.brunnoserver.duckdns.org
+KOTLIN_FRAMEWORK_BUILD_TYPE = Debug

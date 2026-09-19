@@ -1,17 +1,20 @@
 import SwiftUI
-import shared
+import Shared
 
 @main
 struct iOSApp: App {
     init() {
-            #if DEBUG
-            let environmentUrl = "http://api-bun-staging.brunnoserver.duckdns.org/"
-            #else
-            let environmentUrl = "https://api-bun.brunnoserver.duckdns.org/"
-            #endif
-
-            KoinModuleKt.initKoin(baseUrl: environmentUrl, appDeclaration: { _ in })
+        guard
+            let environmentUrl = Bundle.main.object(
+                forInfoDictionaryKey: "API_BASE_URL"
+            ) as? String,
+            !environmentUrl.isEmpty
+        else {
+            fatalError("API_BASE_URL is not configured")
         }
+
+        KoinInitIosKt.startKoinIos(baseUrl: environmentUrl)
+    }
 
     var body: some Scene {
         WindowGroup {
