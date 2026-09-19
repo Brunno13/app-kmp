@@ -9,6 +9,9 @@ depends_on:
   - security-wake-x86
 
 steps:
+  # =========================================================
+  # QUALITY GATE
+  # =========================================================
   - name: android-quality
     image: app-kmp-android-ci:37-jdk17-v3
     pull: false
@@ -24,6 +27,204 @@ steps:
       - |
         set -eu
 
+        chmod +x ./gradlew
         chmod +x ./scripts/quality_android.sh
 
         ./scripts/quality_android.sh
+
+  # =========================================================
+  # MANUAL ANDROID RELEASE BUILD
+  #
+  # Só executa quando:
+  #   BUILD_ANDROID=true
+  #
+  # ANDROID_ENV precisa ser:
+  #   staging
+  #   production
+  # =========================================================
+  - name: android-release-build
+    image: app-kmp-android-ci:37-jdk17-v3
+    pull: false
+
+    when:
+      - evaluate: 'BUILD_ANDROID == "true"'
+
+    environment:
+      ANDROID_HOME: /opt/android-sdk-linux
+      ANDROID_SDK_ROOT: /opt/android-sdk-linux
+
+    commands:
+      - |
+        set -eu
+
+        echo "===== MANUAL ANDROID RELEASE BUILD ====="
+
+        ANDROID_ENV="${ANDROID_ENV:-}"
+
+        case "$ANDROID_ENV" in
+          staging)
+            EXPECTED_ARTIFACT="./app-kmp-staging.apk"
+            ;;
+
+          production)
+            EXPECTED_ARTIFACT="./app-kmp-production.apk"
+            ;;
+
+          *)
+            echo "ANDROID_BUILD_ENV=INVALID"
+            echo "ANDROID_ENV must be staging or production"
+            exit 1
+            ;;
+        esac
+
+        echo "ANDROID_BUILD_ENV=$ANDROID_ENV"
+
+        chmod +x ./gradlew
+        chmod +x ./scripts/build_android.sh
+
+        APP_ENV="$ANDROID_ENV" \
+          ./scripts/build_android.sh
+
+        if [ ! -s "$EXPECTED_ARTIFACT" ]; then
+          echo "ANDROID_RELEASE_ARTIFACT=FAIL"
+          echo "Expected APK was not generated."
+          exit 1
+        fi
+
+        echo
+        echo "===== ANDROID RELEASE ARTIFACT ====="
+
+        ls -lh "$EXPECTED_ARTIFACT"
+
+        echo
+        echo "===== SHA256 ====="
+
+        sha256sum "$EXPECTED_ARTIFACT"
+
+        echo
+        echo "ANDROID_RELEASE_ARTIFACT=PASS"
+        echo "ANDROID_RELEASE_BUILD=PASS"
+
+  # =========================================================
+  # GARAGE S3 UPLOAD
+  #
+  # Usa exclusivamente configuração externa via secrets.
+  # Nenhum endpoint, bucket, prefix ou basename fica
+  # hardcoded neste workflow.
+  # =========================================================
+  - name: android-garage-upload
+    image: public.ecr.aws/aws-cli/aws-cli@sha256:f42bf088cb1456ba9e179ce71fdeb22cc46ff64ea1e3aeae8251ff81391f5bb1
+    pull: false
+
+    when:
+      - evaluate: 'BUILD_ANDROID == "true"'
+
+    environment:
+      GARAGE_ENDPOINT:
+        from_secret: garage_app_kmp_endpoint
+
+      AWS_ACCESS_KEY_ID:
+        from_secret: garage_app_kmp_access_key
+
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: garage_app_kmp_secret_key
+
+      AWS_DEFAULT_REGION:
+        from_secret: garage_app_kmp_region
+
+      AWS_REGION:
+        from_secret: garage_app_kmp_region
+
+      GARAGE_BUCKET:
+        from_secret: garage_app_kmp_bucket
+
+      GARAGE_ANDROID_PREFIX:
+        from_secret: garage_app_kmp_android_prefix
+
+      GARAGE_ARTIFACT_BASENAME:
+        from_secret: garage_app_kmp_artifact_basename
+
+      AWS_EC2_METADATA_DISABLED: "true"
+
+    commands:
+      - |
+        set -eu
+
+        echo "===== GARAGE S3 ANDROID UPLOAD ====="
+
+        ANDROID_ENV="${ANDROID_ENV:-}"
+
+        test -n "$GARAGE_ENDPOINT"
+        test -n "$AWS_ACCESS_KEY_ID"
+        test -n "$AWS_SECRET_ACCESS_KEY"
+        test -n "$AWS_DEFAULT_REGION"
+        test -n "$GARAGE_BUCKET"
+        test -n "$GARAGE_ANDROID_PREFIX"
+        test -n "$GARAGE_ARTIFACT_BASENAME"
+
+        case "$ANDROID_ENV" in
+          staging)
+            SOURCE_ARTIFACT="./app-kmp-staging.apk"
+            ;;
+
+          production)
+            SOURCE_ARTIFACT="./app-kmp-production.apk"
+            ;;
+
+          *)
+            echo "GARAGE_UPLOAD_ENV=INVALID"
+            exit 1
+            ;;
+        esac
+
+        if [ ! -s "$SOURCE_ARTIFACT" ]; then
+          echo "GARAGE_SOURCE_ARTIFACT=FAIL"
+          exit 1
+        fi
+
+        OBJECT_KEY="$GARAGE_ANDROID_PREFIX/$ANDROID_ENV/$GARAGE_ARTIFACT_BASENAME-$ANDROID_ENV.apk"
+
+        echo "GARAGE_CONFIGURATION=PASS"
+        echo "GARAGE_SOURCE_ARTIFACT=PASS"
+        echo "ANDROID_BUILD_ENV=$ANDROID_ENV"
+
+        aws configure set default.s3.addressing_style path
+
+        echo
+        echo "===== UPLOAD APK ====="
+
+        aws \
+          --endpoint-url "$GARAGE_ENDPOINT" \
+          s3 cp \
+          "$SOURCE_ARTIFACT" \
+          "s3://$GARAGE_BUCKET/$OBJECT_KEY" \
+          --content-type "application/vnd.android.package-archive"
+
+        echo "GARAGE_UPLOAD=PASS"
+
+        echo
+        echo "===== VERIFY REMOTE OBJECT ====="
+
+        aws \
+          --endpoint-url "$GARAGE_ENDPOINT" \
+          s3api head-object \
+          --bucket "$GARAGE_BUCKET" \
+          --key "$OBJECT_KEY" \
+          >/tmp/garage-android-head.json
+
+        test -s /tmp/garage-android-head.json
+
+        echo "GARAGE_HEAD_OBJECT=PASS"
+
+        echo
+        echo "============================================================"
+        echo " ANDROID MANUAL BUILD SUMMARY"
+        echo "============================================================"
+        printf '%-32s %s\n' "Quality gate" "PASS"
+        printf '%-32s %s\n' "Environment" "$ANDROID_ENV"
+        printf '%-32s %s\n' "Release build" "PASS"
+        printf '%-32s %s\n' "APK validation" "PASS"
+        printf '%-32s %s\n' "Garage upload" "PASS"
+        printf '%-32s %s\n' "Remote verification" "PASS"
+        echo "============================================================"
+        echo "ANDROID_MANUAL_BUILD=PASS"
