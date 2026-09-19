@@ -1,5 +1,7 @@
 when:
   - event: manual
+  - event: push
+    branch: main
 
 skip_clone: true
 
