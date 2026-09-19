@@ -54,35 +54,121 @@ echo "===== GRADLE JAVA TOOLCHAINS ====="
 echo
 echo "===== UNIT TESTS + COVERAGE GATE ====="
 
+# Remove relatórios anteriores para que uma execução com falha
+# não reutilize resultados antigos.
+rm -rf \
+  shared/build/test-results/testAndroidHostTest \
+  shared/build/reports/jacoco/jacocoBusinessCoverageReport
+
+set +e
+
 ./gradlew \
   :shared:testAndroidHostTest \
   :shared:jacocoBusinessCoverageReport \
   :shared:jacocoBusinessCoverageVerification \
+  --continue \
   --rerun-tasks
+
+QUALITY_GRADLE_RC="$?"
+
+set -e
+
+echo "QUALITY_GRADLE_RC=$QUALITY_GRADLE_RC"
 
 echo
 echo "===== TEST TOTALS ====="
 
-grep -h '<testsuite ' \
-  shared/build/test-results/testAndroidHostTest/TEST-*.xml \
-  | sed -E \
-      's/.*name="([^"]+)".*tests="([^"]+)".*failures="([^"]+)".*errors="([^"]+)".*/SUITE=\1 TESTS=\2 FAILURES=\3 ERRORS=\4/'
+TEST_TOTAL=0
+TEST_FAILURES=0
+TEST_ERRORS=0
+UNIT_TESTS_GATE="FAIL"
+
+TEST_RESULT_DIR="shared/build/test-results/testAndroidHostTest"
+
+if ls "$TEST_RESULT_DIR"/TEST-*.xml >/dev/null 2>&1; then
+
+  grep -h '<testsuite ' \
+    "$TEST_RESULT_DIR"/TEST-*.xml \
+    | sed -E \
+        's/.*name="([^"]+)".*tests="([^"]+)".*failures="([^"]+)".*errors="([^"]+)".*/SUITE=\1 TESTS=\2 FAILURES=\3 ERRORS=\4/'
+
+  TEST_TOTAL="$(
+    grep -h '<testsuite ' "$TEST_RESULT_DIR"/TEST-*.xml \
+      | sed -nE 's/.*tests="([0-9]+)".*/\1/p' \
+      | awk '{ total += $1 } END { print total + 0 }'
+  )"
+
+  TEST_FAILURES="$(
+    grep -h '<testsuite ' "$TEST_RESULT_DIR"/TEST-*.xml \
+      | sed -nE 's/.*failures="([0-9]+)".*/\1/p' \
+      | awk '{ total += $1 } END { print total + 0 }'
+  )"
+
+  TEST_ERRORS="$(
+    grep -h '<testsuite ' "$TEST_RESULT_DIR"/TEST-*.xml \
+      | sed -nE 's/.*errors="([0-9]+)".*/\1/p' \
+      | awk '{ total += $1 } END { print total + 0 }'
+  )"
+
+  if [ "$TEST_TOTAL" -gt 0 ] &&
+     [ "$TEST_FAILURES" -eq 0 ] &&
+     [ "$TEST_ERRORS" -eq 0 ]; then
+    UNIT_TESTS_GATE="PASS"
+  fi
+else
+  echo "ERROR: unit test reports not found"
+fi
+
+echo
+echo "UNIT_TESTS_TOTAL=$TEST_TOTAL"
+echo "UNIT_TESTS_FAILURES=$TEST_FAILURES"
+echo "UNIT_TESTS_ERRORS=$TEST_ERRORS"
+echo "UNIT_TESTS_GATE=$UNIT_TESTS_GATE"
 
 echo
 echo "===== BUSINESS COVERAGE ROOT COUNTERS ====="
 
 XML="shared/build/reports/jacoco/jacocoBusinessCoverageReport/jacocoBusinessCoverageReport.xml"
 
-test -f "$XML"
+COVERAGE_REPORT_OK=0
+BUSINESS_COVERAGE_GATE="FAIL"
 
-for TYPE in INSTRUCTION BRANCH LINE METHOD CLASS; do
-  printf '%s: ' "$TYPE"
+if [ -f "$XML" ]; then
+  COVERAGE_REPORT_OK=1
 
-  grep -o \
-    "<counter type=\"$TYPE\" missed=\"[0-9]*\" covered=\"[0-9]*\"/>" \
-    "$XML" \
-    | tail -n 1
-done
+  for TYPE in INSTRUCTION BRANCH LINE METHOD CLASS; do
+    printf '%s: ' "$TYPE"
+
+    grep -o \
+      "<counter type=\"$TYPE\" missed=\"[0-9]*\" covered=\"[0-9]*\"/>" \
+      "$XML" \
+      | tail -n 1 \
+      || true
+  done
+else
+  echo "ERROR: JaCoCo business coverage report not found"
+fi
+
+# O comando Gradle contém exclusivamente os testes,
+# geração do relatório e o quality gate JaCoCo.
+#
+# Se os testes passaram, o relatório existe e o RC final é zero,
+# a verificação JaCoCo também passou.
+if [ "$UNIT_TESTS_GATE" = "PASS" ] &&
+   [ "$COVERAGE_REPORT_OK" -eq 1 ] &&
+   [ "$QUALITY_GRADLE_RC" -eq 0 ]; then
+  BUSINESS_COVERAGE_GATE="PASS"
+fi
+
+echo
+echo "BUSINESS_COVERAGE_REPORT=$(
+  if [ "$COVERAGE_REPORT_OK" -eq 1 ]; then
+    echo PASS
+  else
+    echo FAIL
+  fi
+)"
+echo "BUSINESS_COVERAGE_GATE=$BUSINESS_COVERAGE_GATE"
 
 echo
 echo "===== DETEKT AUTHORED COMMON MAIN ====="
@@ -307,28 +393,23 @@ fi
 echo
 echo "===== QUALITY SUMMARY ====="
 
-echo "UNIT_TESTS=PASS"
-echo "BUSINESS_COVERAGE=PASS"
-
 DETEKT_GATE="PASS"
 
 if [ "$DETEKT_COMMON_RC" -eq 0 ] &&
    [ "$COMMON_FINDINGS" -eq 0 ]; then
-  echo "DETEKT_COMMON=PASS"
+  DETEKT_COMMON_GATE="PASS"
 else
-  echo "DETEKT_COMMON=FAIL"
+  DETEKT_COMMON_GATE="FAIL"
   DETEKT_GATE="FAIL"
 fi
 
 if [ "$DETEKT_ANDROID_RC" -eq 0 ] &&
    [ "$ANDROID_FINDINGS" -eq 0 ]; then
-  echo "DETEKT_ANDROID=PASS"
+  DETEKT_ANDROID_GATE="PASS"
 else
-  echo "DETEKT_ANDROID=FAIL"
+  DETEKT_ANDROID_GATE="FAIL"
   DETEKT_GATE="FAIL"
 fi
-
-echo "DETEKT_GATE=$DETEKT_GATE"
 
 ANDROID_LINT_GATE="PASS"
 
@@ -341,18 +422,98 @@ if [ "$LINT_REPORT_OK" -ne 1 ] ||
   ANDROID_LINT_GATE="FAIL"
 fi
 
-echo "ANDROID_LINT_GATE=$ANDROID_LINT_GATE"
+ANDROID_QUALITY_GATE="PASS"
 
-if [ "$DETEKT_GATE" != "PASS" ] ||
+if [ "$UNIT_TESTS_GATE" != "PASS" ] ||
+   [ "$BUSINESS_COVERAGE_GATE" != "PASS" ] ||
+   [ "$DETEKT_GATE" != "PASS" ] ||
    [ "$ANDROID_LINT_GATE" != "PASS" ]; then
-  echo
-  echo "ANDROID_QUALITY_GATE=FAIL"
+  ANDROID_QUALITY_GATE="FAIL"
+fi
+
+echo
+echo "============================================================"
+echo " ANDROID QUALITY SUMMARY"
+echo "============================================================"
+
+printf '%-30s %s\n' \
+  "Unit tests" \
+  "$UNIT_TESTS_GATE"
+
+printf '%-30s %s\n' \
+  "Business coverage" \
+  "$BUSINESS_COVERAGE_GATE"
+
+printf '%-30s %s\n' \
+  "Detekt commonMain" \
+  "$DETEKT_COMMON_GATE"
+
+printf '%-30s %s\n' \
+  "Detekt androidMain" \
+  "$DETEKT_ANDROID_GATE"
+
+printf '%-30s %s\n' \
+  "Detekt gate" \
+  "$DETEKT_GATE"
+
+printf '%-30s %s\n' \
+  "Android Lint" \
+  "$ANDROID_LINT_GATE"
+
+echo "------------------------------------------------------------"
+
+printf '%-30s %s\n' \
+  "Tests" \
+  "$TEST_TOTAL"
+
+printf '%-30s %s\n' \
+  "Test failures" \
+  "$TEST_FAILURES"
+
+printf '%-30s %s\n' \
+  "Test errors" \
+  "$TEST_ERRORS"
+
+printf '%-30s %s\n' \
+  "Lint errors" \
+  "$LINT_ERRORS"
+
+printf '%-30s %s\n' \
+  "Lint fatal" \
+  "$LINT_FATALS"
+
+printf '%-30s %s\n' \
+  "Lint actionable warnings" \
+  "$LINT_ACTIONABLE_WARNINGS"
+
+printf '%-30s %s\n' \
+  "Lint advisories" \
+  "$LINT_ADVISORIES"
+
+printf '%-30s %s\n' \
+  "Target SDK" \
+  "$ANDROID_TARGET_SDK"
+
+echo "============================================================"
+printf '%-30s %s\n' \
+  "ANDROID QUALITY GATE" \
+  "$ANDROID_QUALITY_GATE"
+echo "============================================================"
+
+echo
+echo "UNIT_TESTS=$UNIT_TESTS_GATE"
+echo "BUSINESS_COVERAGE=$BUSINESS_COVERAGE_GATE"
+echo "DETEKT_COMMON=$DETEKT_COMMON_GATE"
+echo "DETEKT_ANDROID=$DETEKT_ANDROID_GATE"
+echo "DETEKT_GATE=$DETEKT_GATE"
+echo "ANDROID_LINT_GATE=$ANDROID_LINT_GATE"
+echo "ANDROID_QUALITY_GATE=$ANDROID_QUALITY_GATE"
+
+if [ "$ANDROID_QUALITY_GATE" != "PASS" ]; then
   exit 1
 fi
 
 echo
-echo "ANDROID_QUALITY_GATE=PASS"
-
 if [ "$ANDROID_ASSEMBLE_DEBUG" = "true" ]; then
   echo
   echo "===== ANDROID PRODUCTION DEBUG BUILD ====="
