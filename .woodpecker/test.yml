@@ -14,13 +14,13 @@ steps:
   # NOTIFICAÇÃO DE INÍCIO
   # =========================================================
   - name: notify-start
-    image: bash
+    image: curlimages/curl:8.22.0
     environment:
       GOTIFY_TOKEN:
         from_secret: gotify_token
     commands:
       - |
-        TIMESTAMP="$(TZ=America/Sao_Paulo date '+%d/%m/%Y %H:%M')"
+        TIMESTAMP="$(TZ=BRT3 date '+%d/%m/%Y %H:%M')"
 
         curl -fsS \
           --connect-timeout 5 \
@@ -60,13 +60,13 @@ steps:
   # NOTIFICAÇÕES FINAIS
   # =========================================================
   - name: notify-success
-    image: bash
+    image: curlimages/curl:8.22.0
     environment:
       GOTIFY_TOKEN:
         from_secret: gotify_token
     commands:
       - |
-        TIMESTAMP="$(TZ=America/Sao_Paulo date '+%d/%m/%Y %H:%M')"
+        TIMESTAMP="$(TZ=BRT3 date '+%d/%m/%Y %H:%M')"
 
         curl -fsS \
           --connect-timeout 5 \
@@ -84,13 +84,13 @@ steps:
         status: [success]
 
   - name: notify-error
-    image: bash
+    image: curlimages/curl:8.22.0
     environment:
       GOTIFY_TOKEN:
         from_secret: gotify_token
     commands:
       - |
-        TIMESTAMP="$(TZ=America/Sao_Paulo date '+%d/%m/%Y %H:%M')"
+        TIMESTAMP="$(TZ=BRT3 date '+%d/%m/%Y %H:%M')"
 
         curl -fsS \
           --connect-timeout 5 \
