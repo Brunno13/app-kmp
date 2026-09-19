@@ -49,9 +49,6 @@ kotlin {
 
     sourceSets {
         androidMain.dependencies {
-            // Usado atalho do plugin para o Preview no Android
-            implementation(compose.preview)
-
             // Motores Android
             implementation(libs.koin.android)
             implementation(libs.ktor.client.okhttp)
@@ -66,7 +63,7 @@ kotlin {
             implementation(compose.material3)
             implementation(compose.ui)
             implementation(compose.components.resources)
-            implementation(compose.components.uiToolingPreview)
+            implementation(libs.compose.uiToolingPreview)
 
             // Jetpack ViewModel & Navigation
             implementation(libs.androidx.lifecycle.viewmodelCompose)

@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import com.brunno.appkmp.presentation.components.AppTextField
 import com.brunno.appkmp.presentation.theme.dimens
 import com.brunno.appkmp.presentation.utils.asString
@@ -46,6 +47,28 @@ fun ForgotPasswordScreen(
     var email by remember { mutableStateOf("") }
     val uiState by viewModel.uiState.collectAsState()
 
+    ForgotPasswordScreenContent(
+        email = email,
+        uiState = uiState,
+        onEmailChange = { email = it },
+        onSendLink = {
+            viewModel.forgotPassword(email)
+        },
+        onNavigateToLogin = {
+            viewModel.resetState()
+            onNavigateToLogin()
+        }
+    )
+}
+
+@Composable
+private fun ForgotPasswordScreenContent(
+    email: String,
+    uiState: LoginUiState,
+    onEmailChange: (String) -> Unit,
+    onSendLink: () -> Unit,
+    onNavigateToLogin: () -> Unit
+) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
@@ -66,16 +89,16 @@ fun ForgotPasswordScreen(
             )
 
             Spacer(
-                modifier = Modifier.height(MaterialTheme.dimens.spaceXXL)
+                modifier = Modifier.height(
+                    MaterialTheme.dimens.spaceXXL
+                )
             )
 
             ForgotPasswordContent(
                 email = email,
                 uiState = uiState,
-                onEmailChange = { email = it },
-                onSendLink = {
-                    viewModel.forgotPassword(email)
-                }
+                onEmailChange = onEmailChange,
+                onSendLink = onSendLink
             )
 
             Spacer(
@@ -85,14 +108,13 @@ fun ForgotPasswordScreen(
             )
 
             Text(
-                text = stringResource(Res.string.action_back_to_login),
+                text = stringResource(
+                    Res.string.action_back_to_login
+                ),
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier
-                    .clickable {
-                        viewModel.resetState()
-                        onNavigateToLogin()
-                    }
+                    .clickable(onClick = onNavigateToLogin)
                     .padding(MaterialTheme.dimens.spaceSmall)
             )
         }
@@ -163,4 +185,23 @@ private fun ForgotPasswordContent(
             )
         }
     }
+}
+
+@Preview(
+    name = "Forgot Password",
+    showBackground = true
+)
+@Composable
+private fun ForgotPasswordScreenPreview() {
+    var email by remember {
+        mutableStateOf("brunno@email.com")
+    }
+
+    ForgotPasswordScreenContent(
+        email = email,
+        uiState = LoginUiState.Idle,
+        onEmailChange = { email = it },
+        onSendLink = {},
+        onNavigateToLogin = {}
+    )
 }

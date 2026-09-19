@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import com.brunno.appkmp.presentation.components.AppTextField
 import com.brunno.appkmp.presentation.theme.dimens
@@ -348,4 +349,28 @@ private fun LoginRegisterPrompt(
                 .padding(MaterialTheme.dimens.spaceTiny)
         )
     }
+}
+
+@Preview(
+    name = "Login",
+    showBackground = true
+)
+@Composable
+private fun LoginScreenPreview() {
+    var form by remember {
+        mutableStateOf(LoginFormState())
+    }
+
+    LoginContent(
+        form = form,
+        uiState = LoginUiState.Idle,
+        autoLoginState = AutoLoginState.Idle,
+        actions = LoginActions(
+            onFormChange = { form = it },
+            onLogin = {},
+            onForgotPassword = {},
+            onRetryBiometrics = {},
+            onRegister = {}
+        )
+    )
 }

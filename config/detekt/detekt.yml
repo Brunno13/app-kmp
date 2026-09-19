@@ -3,7 +3,16 @@ naming:
     ignoreAnnotated:
       - 'Composable'
 
+complexity:
+  TooManyFunctions:
+    ignoreAnnotatedFunctions:
+      - 'Preview'
+
 style:
   MagicNumber:
     excludes:
       - '**/presentation/theme/Color.kt'
+
+  UnusedPrivateMember:
+    ignoreAnnotated:
+      - 'Preview'

@@ -40,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.brunno.appkmp.domain.enums.ThemeMode
@@ -386,4 +387,30 @@ fun ThemeOptionButton(
             )
         }
     }
+}
+
+@Preview(
+    name = "Profile",
+    showBackground = true
+)
+@Composable
+private fun ProfileScreenPreview() {
+    ProfileContent(
+        state = ProfileUiState(
+            userName = "Brunno Silva",
+            userEmail = "brunno@email.com",
+            avatarData = null,
+            themeMode = ThemeMode.AUTO,
+            offlineMode = false
+        ),
+        navigation = ProfileNavigationActions(
+            onNavigateToHome = {},
+            onNavigateToProfile = {},
+            onNavigateToEditProfile = {},
+            onNavigateToSecurity = {}
+        ),
+        onThemeChange = {},
+        onOfflineModeChange = {},
+        onLogout = {}
+    )
 }

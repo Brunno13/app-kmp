@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.brunno.appkmp.presentation.components.AlertType
@@ -487,6 +488,34 @@ private fun EditProfileContent(
             formContent()
         }
     }
+}
+
+@Preview(
+    name = "Edit Profile",
+    showBackground = true
+)
+@Composable
+private fun EditProfileScreenPreview() {
+    EditProfileContent(
+        onBack = {},
+        photoContent = {
+            ProfilePhotoSection(
+                selectedBase64 = null,
+                avatarData = null,
+                userName = "Brunno Silva",
+                onChangePhotoClick = {}
+            )
+        },
+        formContent = {
+            EditProfileFormSection(
+                name = "Brunno Silva",
+                onNameChange = {},
+                hasChanges = true,
+                isLoading = false,
+                onSave = {}
+            )
+        }
+    )
 }
 
 private fun submitProfileChanges(

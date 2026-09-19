@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import com.brunno.appkmp.presentation.components.AppTextField
 import com.brunno.appkmp.presentation.theme.dimens
 import com.brunno.appkmp.presentation.utils.asString
@@ -284,4 +285,30 @@ private fun RegisterLoginPrompt(
                 .padding(MaterialTheme.dimens.spaceTiny)
         )
     }
+}
+
+@Preview(
+    name = "Register",
+    showBackground = true
+)
+@Composable
+private fun RegisterScreenPreview() {
+    var form by remember {
+        mutableStateOf(
+            RegisterFormState(
+                fullName = "",
+                email = "",
+                password = "",
+                confirmPassword = ""
+            )
+        )
+    }
+
+    RegisterContent(
+        form = form,
+        uiState = LoginUiState.Idle,
+        onFormChange = { form = it },
+        onRegister = {},
+        onNavigateToLogin = {}
+    )
 }

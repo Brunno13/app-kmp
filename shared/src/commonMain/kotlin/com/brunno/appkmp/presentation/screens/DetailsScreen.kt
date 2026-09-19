@@ -8,6 +8,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import kmpprojectbrunno.shared.generated.resources.Res
 import kmpprojectbrunno.shared.generated.resources.btn_back
 import kmpprojectbrunno.shared.generated.resources.details_title
@@ -32,4 +33,15 @@ fun DetailsScreen(
             )
         }
     }
+}
+
+@Preview(
+    name = "Details",
+    showBackground = true
+)
+@Composable
+private fun DetailsScreenPreview() {
+    DetailsScreen(
+        onBack = {}
+    )
 }

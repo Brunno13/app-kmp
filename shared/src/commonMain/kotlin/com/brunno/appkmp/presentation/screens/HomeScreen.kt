@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.zIndex
 import com.brunno.appkmp.presentation.components.AlertType
 import com.brunno.appkmp.presentation.components.AppBottomBar
@@ -58,8 +59,20 @@ fun HomeScreen(
     viewModel: AuthViewModel = koinViewModel()
 ) {
     val currentUser by viewModel.currentUser.collectAsState()
-    val userName = currentUser?.name ?: ""
 
+    HomeScreenContent(
+        userName = currentUser?.name ?: "",
+        onNavigateToHome = onNavigateToHome,
+        onNavigateToProfile = onNavigateToProfile
+    )
+}
+
+@Composable
+private fun HomeScreenContent(
+    userName: String,
+    onNavigateToHome: () -> Unit,
+    onNavigateToProfile: () -> Unit
+) {
     var showToast by remember { mutableStateOf(false) }
     var showModal by remember { mutableStateOf(false) }
     var showCrash by remember { mutableStateOf(false) }
@@ -72,7 +85,9 @@ fun HomeScreen(
     }
 
     if (showCrash) {
-        AppErrorScreen(onRetry = { showCrash = false })
+        AppErrorScreen(
+            onRetry = { showCrash = false }
+        )
         return
     }
 
@@ -198,4 +213,17 @@ private fun HomeFeedback(
             onDismiss = onDismissModal
         )
     }
+}
+
+@Preview(
+    name = "Home",
+    showBackground = true
+)
+@Composable
+private fun HomeScreenPreview() {
+    HomeScreenContent(
+        userName = "Brunno Silva",
+        onNavigateToHome = {},
+        onNavigateToProfile = {}
+    )
 }
