@@ -1,5 +1,7 @@
 when:
   - event: manual
+    evaluate: 'BUILD_IOS != "staging" && BUILD_IOS != "production"'
+
   - event: push
     branch: main
 
