@@ -10,12 +10,17 @@ steps:
   # =========================================================
   - name: notify-start
     image: bash
+
     environment:
       GOTIFY_TOKEN:
         from_secret: gotify_token
+
     commands:
       - |
-        TIMESTAMP="$(TZ=America/Sao_Paulo date '+%d/%m/%Y %H:%M')"
+        set -eu
+
+        TIMESTAMP="$$(TZ=BRT3 date '+%d/%m/%Y %H:%M')"
+
         curl -fsS \
           --connect-timeout 5 \
           --max-time 10 \
@@ -23,178 +28,464 @@ steps:
           -X POST \
           "https://gotify.brunnoserver.duckdns.org/message?token=$$GOTIFY_TOKEN" \
           -F "title=WoodpeckerCI" \
-          -F "message=WoodpeckerCI · App-KMP · Production pipeline started · Tag ${CI_COMMIT_TAG} · $${TIMESTAMP}" \
+          -F "message=WoodpeckerCI · ${CI_REPO_NAME} · Production pipeline started · Tag ${CI_COMMIT_TAG} · $${TIMESTAMP}" \
           -F "priority=5" \
           || true
 
   # =========================================================
-  # FASE 1: TESTES E BUILD DOS ARTEFATOS (VIA SCRIPTS)
+  # FASE 1: QUALITY + BUILD DOS ARTEFATOS
+  #
+  # Os scripts de Android/iOS consomem:
+  #   ci/artifacts.env
+  #
+  # APP_ENV=production preserva o comportamento histórico
+  # do release acionado por tag.
   # =========================================================
   - name: build-artifacts
     image: bash
+
     environment:
       APP_ENV: "production"
+
     commands:
-      - echo "🔧 Configurando permissões..."
-      - chmod +x ./gradlew
-      - chmod +x ./scripts/*.sh
+      - |
+        set -eu
 
-      - echo "🧹 Verificando código (Lint)..."
-      - ./scripts/lint.sh
+        echo "===== RELEASE BUILD / CONFIG ====="
 
-      - echo "🧪 Executando testes..."
-      - ./scripts/test.sh
+        CONFIG_FILE="./ci/artifacts.env"
 
-      - echo "🤖 Compilando o APK Android de Produção..."
-      - ./scripts/build_android.sh
+        if [ ! -r "$$CONFIG_FILE" ]; then
+          echo "ARTIFACT_CONFIG=FAIL"
+          exit 1
+        fi
 
-      - echo "🍎 Compilando o pacote iOS de Produção..."
-      - ./scripts/build_ios.sh
+        set -a
+        . "$$CONFIG_FILE"
+        set +a
+
+        test -n "$$ARTIFACT_BASENAME"
+
+        ANDROID_ARTIFACT="$${ARTIFACT_BASENAME}-production.apk"
+        IOS_ARTIFACT="$${ARTIFACT_BASENAME}-ios-production.zip"
+
+        echo "ARTIFACT_CONFIG=PASS"
+        echo "ANDROID_ARTIFACT=$$ANDROID_ARTIFACT"
+        echo "IOS_ARTIFACT=$$IOS_ARTIFACT"
+
+        echo
+        echo "===== PERMISSIONS ====="
+
+        chmod +x ./gradlew
+        chmod +x ./scripts/*.sh
+
+        echo
+        echo "===== LINT ====="
+
+        ./scripts/lint.sh
+
+        echo
+        echo "===== TESTS ====="
+
+        ./scripts/test.sh
+
+        echo
+        echo "===== ANDROID PRODUCTION BUILD ====="
+
+        ./scripts/build_android.sh
+
+        echo
+        echo "===== IOS PRODUCTION BUILD ====="
+
+        ./scripts/build_ios.sh
+
+        echo
+        echo "===== RELEASE ARTIFACTS ====="
+
+        test -s "./$$ANDROID_ARTIFACT"
+        test -s "./$$IOS_ARTIFACT"
+
+        ls -lah \
+          "./$$ANDROID_ARTIFACT" \
+          "./$$IOS_ARTIFACT"
+
+        echo
+        echo "===== SHA256 ====="
+
+        shasum -a 256 \
+          "./$$ANDROID_ARTIFACT" \
+          "./$$IOS_ARTIFACT"
+
+        echo
+        echo "RELEASE_BUILD=PASS"
 
   # =========================================================
   # FASE 2: RELEASE NO GITEA
   # =========================================================
-  - name: gerar-release-notes
+  - name: release-gitea
     image: bash
+
     environment:
       GITEA_TOKEN:
         from_secret: gitea_token
+
+      GITEA_API_BASE:
+        from_secret: gitea_api_base
+
     commands:
       - |
-        set -e
-        git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
-        git fetch --all --unshallow || git fetch --all
+        set -eu
+
+        echo "===== GITEA RELEASE ====="
+
+        test -n "$$GITEA_TOKEN"
+        test -n "$$GITEA_API_BASE"
+        test -r ./ci/artifacts.env
+
+        set -a
+        . ./ci/artifacts.env
+        set +a
+
+        test -n "$$ARTIFACT_BASENAME"
+
+        ANDROID_ARTIFACT="$${ARTIFACT_BASENAME}-production.apk"
+        IOS_ARTIFACT="$${ARTIFACT_BASENAME}-ios-production.zip"
+
+        test -s "./$$ANDROID_ARTIFACT"
+        test -s "./$$IOS_ARTIFACT"
+
+        # Aceita o secret com ou sem "/" no final.
+        GITEA_API_BASE="$${GITEA_API_BASE%/}"
+
+        echo
+        echo "===== RELEASE HISTORY ====="
+
+        git config \
+          remote.origin.fetch \
+          "+refs/heads/*:refs/remotes/origin/*"
+
+        git fetch --all --unshallow \
+          || git fetch --all
+
         git fetch --tags
 
-        PREV_TAG=$$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        PREV_TAG="$$( \
+          git describe \
+            --tags \
+            --abbrev=0 \
+            HEAD^ \
+            2>/dev/null \
+            || true \
+        )"
 
         if [ -z "$$PREV_TAG" ]; then
-          CHANGELOG=$$(git log --pretty=format:"- %h %s")
+          CHANGELOG="$$( \
+            git log \
+              --pretty=format:"- %h %s" \
+          )"
         else
-          CHANGELOG=$$(git log --pretty=format:"- %h %s" "$$PREV_TAG..HEAD")
+          CHANGELOG="$$( \
+            git log \
+              --pretty=format:"- %h %s" \
+              "$$PREV_TAG..HEAD" \
+          )"
         fi
 
-        RELEASE_BODY=$$(printf '🚀 Deploy automático multiplataforma Android e iOS (KMP) realizado nativamente pelo Apple Silicon M1.\n\n---\n\n%s' "$$CHANGELOG")
-        printf '%s\n' "$$RELEASE_BODY" > .release_body.txt
+        RELEASE_BODY="$$( \
+          printf \
+            '🚀 Deploy automático multiplataforma Android e iOS (KMP) realizado nativamente pelo agente Apple Silicon.\n\n---\n\n%s' \
+            "$$CHANGELOG" \
+        )"
 
-        JSON_PAYLOAD=$$(jq -n \
-          --arg tag "${CI_COMMIT_TAG}" \
-          --arg name "Versão ${CI_COMMIT_TAG}" \
-          --arg body "$$RELEASE_BODY" \
-          '{ tag_name: $tag, name: $name, body: $body }')
+        printf '%s\n' \
+          "$$RELEASE_BODY" \
+          > .release_body.txt
 
-        echo "=== ENVIANDO RELEASE PARA O GITEA ==="
-        RESPONSE=$$(curl -s -X POST "http://192.168.31.215:3099/api/v1/repos/${CI_REPO_OWNER}/${CI_REPO_NAME}/releases" \
-          -H "Accept: application/json" \
-          -H "Authorization: token $$GITEA_TOKEN" \
-          -H "Content-Type: application/json" \
-          -d "$$JSON_PAYLOAD")
+        JSON_PAYLOAD="$$( \
+          jq -n \
+            --arg tag "${CI_COMMIT_TAG}" \
+            --arg name "Versão ${CI_COMMIT_TAG}" \
+            --arg body "$$RELEASE_BODY" \
+            '{
+              tag_name: $tag,
+              name: $name,
+              body: $body
+            }' \
+        )"
 
-        RELEASE_ID=$$(printf '%s' "$$RESPONSE" | jq -r '.id')
+        echo
+        echo "===== CREATE GITEA RELEASE ====="
 
-        if [ "$$RELEASE_ID" = "null" ] || [ -z "$$RELEASE_ID" ]; then
-          echo "❌ ERRO: O Gitea não retornou um ID válido."
-          echo "Resposta recebida: $$RESPONSE"
+        RESPONSE="$$( \
+          curl \
+            --silent \
+            --show-error \
+            -X POST \
+            "$$GITEA_API_BASE/repos/${CI_REPO_OWNER}/${CI_REPO_NAME}/releases" \
+            -H "Accept: application/json" \
+            -H "Authorization: token $$GITEA_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$$JSON_PAYLOAD" \
+        )"
+
+        RELEASE_ID="$$( \
+          printf '%s' "$$RESPONSE" \
+            | jq -r '.id' \
+        )"
+
+        if [ "$$RELEASE_ID" = "null" ] || \
+           [ -z "$$RELEASE_ID" ]; then
+
+          echo "GITEA_RELEASE_CREATE=FAIL"
+          echo "Resposta recebida:"
+          printf '%s\n' "$$RESPONSE"
+
           exit 1
         fi
 
-        echo "=== VERIFICANDO ARTEFATOS ==="
-        ls -lah ./app-kmp-production.apk ./app-kmp-ios-production.zip
+        echo "GITEA_RELEASE_CREATE=PASS"
 
-        echo "=== INICIANDO UPLOAD DOS ARTEFATOS PARA O GITEA ==="
-        curl -fsS -X POST "http://192.168.31.215:3099/api/v1/repos/${CI_REPO_OWNER}/${CI_REPO_NAME}/releases/$$RELEASE_ID/assets?name=app-kmp-production.apk" \
+        echo
+        echo "===== UPLOAD GITEA ARTIFACTS ====="
+
+        curl -fsS \
+          -X POST \
+          "$$GITEA_API_BASE/repos/${CI_REPO_OWNER}/${CI_REPO_NAME}/releases/$$RELEASE_ID/assets?name=$$ANDROID_ARTIFACT" \
           -H "Authorization: token $$GITEA_TOKEN" \
-          -F "attachment=@./app-kmp-production.apk"
+          -F "attachment=@./$$ANDROID_ARTIFACT"
 
-        curl -fsS -X POST "http://192.168.31.215:3099/api/v1/repos/${CI_REPO_OWNER}/${CI_REPO_NAME}/releases/$$RELEASE_ID/assets?name=app-kmp-ios-production.zip" \
+        echo "GITEA_ANDROID_UPLOAD=PASS"
+
+        curl -fsS \
+          -X POST \
+          "$$GITEA_API_BASE/repos/${CI_REPO_OWNER}/${CI_REPO_NAME}/releases/$$RELEASE_ID/assets?name=$$IOS_ARTIFACT" \
           -H "Authorization: token $$GITEA_TOKEN" \
-          -F "attachment=@./app-kmp-ios-production.zip"
+          -F "attachment=@./$$IOS_ARTIFACT"
 
-        echo "✅ DEPLOY FINALIZADO COM SUCESSO NO GITEA!"
+        echo "GITEA_IOS_UPLOAD=PASS"
+
+        echo
+        echo "============================================================"
+        echo " GITEA RELEASE SUMMARY"
+        echo "============================================================"
+        printf '%-32s %s\n' "Release creation" "PASS"
+        printf '%-32s %s\n' "Android artifact" "PASS"
+        printf '%-32s %s\n' "iOS artifact" "PASS"
+        echo "============================================================"
+        echo "GITEA_RELEASE=PASS"
 
   # =========================================================
   # FASE 3: ESPELHAMENTO PARA O GITHUB
   # =========================================================
-  - name: espelhar-github
+  - name: mirror-github
     image: bash
+
     environment:
-      GITHUB_USER: Brunno13
       GITHUB_TOKEN:
         from_secret: github_token
+
     commands:
-      - echo "=== SINCRONIZANDO REPOSITÓRIO COM O GITHUB ==="
-      - git config --global --add safe.directory "*"
-      - git config --global http.postBuffer 524288000
-      - GIT_TERMINAL_PROMPT=0 git -c credential.helper= push https://$$GITHUB_TOKEN@github.com/$$GITHUB_USER/${CI_REPO_NAME}.git HEAD:main --force
-      - GIT_TERMINAL_PROMPT=0 git -c credential.helper= push https://$$GITHUB_TOKEN@github.com/$$GITHUB_USER/${CI_REPO_NAME}.git ${CI_COMMIT_TAG} --force
+      - |
+        set -eu
+
+        echo "===== GITHUB MIRROR ====="
+
+        test -n "$$GITHUB_TOKEN"
+
+        RELEASE_CONFIG="./ci/release.env"
+
+        if [ ! -r "$$RELEASE_CONFIG" ]; then
+          echo "RELEASE_CONFIG=FAIL"
+          exit 1
+        fi
+
+        set -a
+        . "$$RELEASE_CONFIG"
+        set +a
+
+        test -n "$$GITHUB_OWNER"
+
+        echo "RELEASE_CONFIG=PASS"
+
+        git config \
+          --global \
+          --add \
+          safe.directory \
+          "*"
+
+        git config \
+          --global \
+          http.postBuffer \
+          524288000
+
+        GITHUB_REPO_URL="https://$$GITHUB_TOKEN@github.com/$$GITHUB_OWNER/${CI_REPO_NAME}.git"
+
+        echo
+        echo "===== PUSH MAIN ====="
+
+        GIT_TERMINAL_PROMPT=0 \
+          git \
+            -c credential.helper= \
+            push \
+            "$$GITHUB_REPO_URL" \
+            HEAD:main \
+            --force
+
+        echo "GITHUB_MAIN_MIRROR=PASS"
+
+        echo
+        echo "===== PUSH TAG ====="
+
+        GIT_TERMINAL_PROMPT=0 \
+          git \
+            -c credential.helper= \
+            push \
+            "$$GITHUB_REPO_URL" \
+            "${CI_COMMIT_TAG}" \
+            --force
+
+        echo "GITHUB_TAG_MIRROR=PASS"
+
+        echo
+        echo "GITHUB_MIRROR=PASS"
 
   # =========================================================
   # FASE 4: RELEASE NO GITHUB
   # =========================================================
-  - name: criar-release-github
+  - name: release-github
     image: bash
+
     environment:
-      GITHUB_USER: Brunno13
       GITHUB_TOKEN:
         from_secret: github_token
+
     commands:
       - |
-        set -e
-        echo "=== CRIANDO RELEASE NO GITHUB ==="
-        GITHUB_API_URL="https://api.github.com/repos/$$GITHUB_USER/${CI_REPO_NAME}/releases"
+        set -eu
+
+        echo "===== GITHUB RELEASE ====="
+
+        test -n "$$GITHUB_TOKEN"
+        test -r ./ci/artifacts.env
+        test -r ./ci/release.env
+
+        set -a
+        . ./ci/artifacts.env
+        . ./ci/release.env
+        set +a
+
+        test -n "$$ARTIFACT_BASENAME"
+        test -n "$$GITHUB_OWNER"
+
+        ANDROID_ARTIFACT="$${ARTIFACT_BASENAME}-production.apk"
+        IOS_ARTIFACT="$${ARTIFACT_BASENAME}-ios-production.zip"
+
+        test -s "./$$ANDROID_ARTIFACT"
+        test -s "./$$IOS_ARTIFACT"
+
+        GITHUB_API_URL="https://api.github.com/repos/$$GITHUB_OWNER/${CI_REPO_NAME}/releases"
 
         if [ -f .release_body.txt ]; then
-          RELEASE_BODY=$$(cat .release_body.txt)
+          RELEASE_BODY="$$(cat .release_body.txt)"
         else
           RELEASE_BODY="🚀 Lançamento automatizado KMP sincronizado a partir do servidor Gitea interno."
         fi
 
-        JSON_PAYLOAD=$$(jq -n \
-          --arg tag "${CI_COMMIT_TAG}" \
-          --arg name "Versão ${CI_COMMIT_TAG}" \
-          --arg body "$$RELEASE_BODY" \
-          '{ tag_name: $tag, name: $name, body: $body }')
+        JSON_PAYLOAD="$$( \
+          jq -n \
+            --arg tag "${CI_COMMIT_TAG}" \
+            --arg name "Versão ${CI_COMMIT_TAG}" \
+            --arg body "$$RELEASE_BODY" \
+            '{
+              tag_name: $tag,
+              name: $name,
+              body: $body
+            }' \
+        )"
 
-        RESPONSE=$$(curl -s -X POST "$$GITHUB_API_URL" \
-          -H "Accept: application/vnd.github+json" \
-          -H "Authorization: Bearer $$GITHUB_TOKEN" \
-          -H "Content-Type: application/json" \
-          -d "$$JSON_PAYLOAD")
+        echo
+        echo "===== CREATE GITHUB RELEASE ====="
 
-        RELEASE_ID=$$(printf '%s' "$$RESPONSE" | jq -r '.id')
+        RESPONSE="$$( \
+          curl \
+            --silent \
+            --show-error \
+            -X POST \
+            "$$GITHUB_API_URL" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $$GITHUB_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$$JSON_PAYLOAD" \
+        )"
 
-        if [ "$$RELEASE_ID" = "null" ] || [ -z "$$RELEASE_ID" ]; then
-          echo "❌ ERRO: O GitHub não retornou um ID válido."
-          echo "Resposta recebida: $$RESPONSE"
+        RELEASE_ID="$$( \
+          printf '%s' "$$RESPONSE" \
+            | jq -r '.id' \
+        )"
+
+        if [ "$$RELEASE_ID" = "null" ] || \
+           [ -z "$$RELEASE_ID" ]; then
+
+          echo "GITHUB_RELEASE_CREATE=FAIL"
+          echo "Resposta recebida:"
+          printf '%s\n' "$$RESPONSE"
+
           exit 1
         fi
 
-        echo "=== INICIANDO UPLOAD DOS ARTEFATOS NO GITHUB ==="
-        GH_UPLOAD_URL="https://uploads.github.com/repos/$$GITHUB_USER/${CI_REPO_NAME}/releases/$$RELEASE_ID/assets"
+        echo "GITHUB_RELEASE_CREATE=PASS"
 
-        curl -fsS -X POST "$$GH_UPLOAD_URL?name=app-kmp-production.apk" \
+        GH_UPLOAD_URL="https://uploads.github.com/repos/$$GITHUB_OWNER/${CI_REPO_NAME}/releases/$$RELEASE_ID/assets"
+
+        echo
+        echo "===== UPLOAD GITHUB ARTIFACTS ====="
+
+        curl -fsS \
+          -X POST \
+          "$$GH_UPLOAD_URL?name=$$ANDROID_ARTIFACT" \
           -H "Authorization: Bearer $$GITHUB_TOKEN" \
           -H "Content-Type: application/vnd.android.package-archive" \
-          --data-binary "@./app-kmp-production.apk"
+          --data-binary "@./$$ANDROID_ARTIFACT"
 
-        curl -fsS -X POST "$$GH_UPLOAD_URL?name=app-kmp-ios-production.zip" \
+        echo "GITHUB_ANDROID_UPLOAD=PASS"
+
+        curl -fsS \
+          -X POST \
+          "$$GH_UPLOAD_URL?name=$$IOS_ARTIFACT" \
           -H "Authorization: Bearer $$GITHUB_TOKEN" \
           -H "Content-Type: application/zip" \
-          --data-binary "@./app-kmp-ios-production.zip"
+          --data-binary "@./$$IOS_ARTIFACT"
 
-        echo "✅ RELEASE NO GITHUB CRIADA COM SUCESSO!"
+        echo "GITHUB_IOS_UPLOAD=PASS"
+
+        echo
+        echo "============================================================"
+        echo " RELEASE PIPELINE SUMMARY"
+        echo "============================================================"
+        printf '%-32s %s\n' "Build Android" "PASS"
+        printf '%-32s %s\n' "Build iOS" "PASS"
+        printf '%-32s %s\n' "Gitea release" "PASS"
+        printf '%-32s %s\n' "GitHub mirror" "PASS"
+        printf '%-32s %s\n' "GitHub release" "PASS"
+        echo "============================================================"
+        echo "RELEASE_PIPELINE=PASS"
 
   # =========================================================
-  # NOTIFICAÇÕES FINAIS
+  # NOTIFICAÇÃO DE SUCESSO
   # =========================================================
   - name: notify-success
     image: bash
+
     environment:
       GOTIFY_TOKEN:
         from_secret: gotify_token
+
     commands:
       - |
-        TIMESTAMP="$(TZ=America/Sao_Paulo date '+%d/%m/%Y %H:%M')"
+        set -eu
+
+        TIMESTAMP="$$(TZ=BRT3 date '+%d/%m/%Y %H:%M')"
+
         curl -fsS \
           --connect-timeout 5 \
           --max-time 10 \
@@ -202,21 +493,30 @@ steps:
           -X POST \
           "https://gotify.brunnoserver.duckdns.org/message?token=$$GOTIFY_TOKEN" \
           -F "title=WoodpeckerCI" \
-          -F "message=WoodpeckerCI · App-KMP · Production pipeline finished successfully · Tag ${CI_COMMIT_TAG} · $${TIMESTAMP}" \
+          -F "message=WoodpeckerCI · ${CI_REPO_NAME} · Production pipeline finished successfully · Tag ${CI_COMMIT_TAG} · $${TIMESTAMP}" \
           -F "priority=5" \
           || true
+
     when:
       - event: tag
         status: [success]
 
+  # =========================================================
+  # NOTIFICAÇÃO DE ERRO
+  # =========================================================
   - name: notify-error
     image: bash
+
     environment:
       GOTIFY_TOKEN:
         from_secret: gotify_token
+
     commands:
       - |
-        TIMESTAMP="$(TZ=America/Sao_Paulo date '+%d/%m/%Y %H:%M')"
+        set -eu
+
+        TIMESTAMP="$$(TZ=BRT3 date '+%d/%m/%Y %H:%M')"
+
         curl -fsS \
           --connect-timeout 5 \
           --max-time 10 \
@@ -224,9 +524,10 @@ steps:
           -X POST \
           "https://gotify.brunnoserver.duckdns.org/message?token=$$GOTIFY_TOKEN" \
           -F "title=WoodpeckerCI" \
-          -F "message=WoodpeckerCI · App-KMP · Production pipeline failed · Tag ${CI_COMMIT_TAG} · $${TIMESTAMP}" \
+          -F "message=WoodpeckerCI · ${CI_REPO_NAME} · Production pipeline failed · Tag ${CI_COMMIT_TAG} · $${TIMESTAMP}" \
           -F "priority=8" \
           || true
+
     when:
       - event: tag
         status: [failure]
