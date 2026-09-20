@@ -1,0 +1,285 @@
+when:
+  - event: manual
+    evaluate: 'BUILD_IOS == "staging" || BUILD_IOS == "production"'
+
+labels:
+  platform: darwin/arm64
+
+steps:
+  # =========================================================
+  # PREFLIGHT
+  # =========================================================
+  - name: ios-preflight
+    image: bash
+
+    environment:
+      GARAGE_ENDPOINT:
+        from_secret: garage_app_kmp_endpoint
+
+      GARAGE_ACCESS_KEY:
+        from_secret: garage_app_kmp_access_key
+
+      GARAGE_SECRET_KEY:
+        from_secret: garage_app_kmp_secret_key
+
+    commands:
+      - |
+        set -eu
+
+        echo "===== IOS MANUAL BUILD PREFLIGHT ====="
+
+        BUILD_ENV="$BUILD_IOS"
+
+        case "$BUILD_ENV" in
+          staging|production)
+            ;;
+          *)
+            echo "IOS_BUILD_ENV=INVALID"
+            exit 1
+            ;;
+        esac
+
+        # Evita uma chamada ambígua com Android + iOS juntos.
+        ANDROID_REQUEST="$(printenv BUILD_ANDROID 2>/dev/null || true)"
+
+        case "$ANDROID_REQUEST" in
+          staging|production)
+            echo "BUILD_REQUEST_CONFLICT=FAIL"
+            echo "Use BUILD_ANDROID ou BUILD_IOS, não ambos."
+            exit 1
+            ;;
+        esac
+
+        CONFIG_FILE="./ci/artifacts.env"
+
+        test -r "$CONFIG_FILE"
+
+        set -a
+        . "$CONFIG_FILE"
+        set +a
+
+        test -n "$GARAGE_ENDPOINT"
+        test -n "$GARAGE_ACCESS_KEY"
+        test -n "$GARAGE_SECRET_KEY"
+        test -n "$GARAGE_REGION"
+        test -n "$GARAGE_BUCKET"
+        test -n "$GARAGE_IOS_PREFIX"
+        test -n "$ARTIFACT_BASENAME"
+
+        echo "IOS_BUILD_ENV=$BUILD_ENV"
+        echo "ARTIFACT_CONFIG=PASS"
+
+        echo
+        echo "===== CURL AWS SIGV4 ====="
+
+        curl --help all | grep -q -- '--aws-sigv4'
+
+        echo "CURL_AWS_SIGV4=PASS"
+
+        ENDPOINT="$(
+          printf '%s' "$GARAGE_ENDPOINT" |
+            sed 's:/*$::'
+        )"
+
+        echo
+        echo "===== GARAGE BUCKET ACCESS ====="
+
+        HTTP_CODE="$(
+          curl \
+            --silent \
+            --show-error \
+            --output /dev/null \
+            --write-out '%{http_code}' \
+            --head \
+            --aws-sigv4 "aws:amz:$GARAGE_REGION:s3" \
+            --user "$GARAGE_ACCESS_KEY:$GARAGE_SECRET_KEY" \
+            "$ENDPOINT/$GARAGE_BUCKET"
+        )"
+
+        if [ "$HTTP_CODE" != "200" ]; then
+          echo "GARAGE_BUCKET_ACCESS=FAIL"
+          echo "HTTP_STATUS=$HTTP_CODE"
+          exit 1
+        fi
+
+        echo "GARAGE_BUCKET_ACCESS=PASS"
+        echo "IOS_PREFLIGHT=PASS"
+
+  # =========================================================
+  # QUALITY
+  #
+  # Mantém a mesma validação usada hoje no release por tag.
+  # =========================================================
+  - name: ios-quality
+    image: bash
+
+    commands:
+      - |
+        set -eu
+
+        echo "===== IOS QUALITY ====="
+
+        chmod +x ./gradlew
+        chmod +x ./scripts/*.sh
+
+        echo
+        echo "===== LINT ====="
+        ./scripts/lint.sh
+
+        echo
+        echo "===== TESTS ====="
+        ./scripts/test.sh
+
+        echo
+        echo "IOS_QUALITY=PASS"
+
+  # =========================================================
+  # BUILD
+  # =========================================================
+  - name: ios-build
+    image: bash
+
+    commands:
+      - |
+        set -eu
+
+        echo "===== MANUAL IOS BUILD ====="
+
+        BUILD_ENV="$BUILD_IOS"
+
+        chmod +x ./gradlew
+        chmod +x ./scripts/build_ios.sh
+
+        APP_ENV="$BUILD_ENV" \
+          ./scripts/build_ios.sh
+
+        set -a
+        . ./ci/artifacts.env
+        set +a
+
+        EXPECTED_ARTIFACT="./$ARTIFACT_BASENAME-ios-$BUILD_ENV.zip"
+
+        if [ ! -s "$EXPECTED_ARTIFACT" ]; then
+          echo "IOS_ARTIFACT=FAIL"
+          exit 1
+        fi
+
+        echo
+        echo "===== IOS ARTIFACT ====="
+
+        ls -lh "$EXPECTED_ARTIFACT"
+
+        echo
+        echo "===== SHA256 ====="
+
+        shasum -a 256 "$EXPECTED_ARTIFACT"
+
+        echo
+        echo "IOS_ARTIFACT=PASS"
+        echo "IOS_RELEASE_BUILD=PASS"
+
+  # =========================================================
+  # GARAGE UPLOAD
+  #
+  # Usa curl nativo + AWS SigV4.
+  # Não requer AWS CLI, Docker ou instalação no MacBook.
+  # =========================================================
+  - name: ios-garage-upload
+    image: bash
+
+    environment:
+      GARAGE_ENDPOINT:
+        from_secret: garage_app_kmp_endpoint
+
+      GARAGE_ACCESS_KEY:
+        from_secret: garage_app_kmp_access_key
+
+      GARAGE_SECRET_KEY:
+        from_secret: garage_app_kmp_secret_key
+
+    commands:
+      - |
+        set -eu
+
+        echo "===== GARAGE S3 IOS UPLOAD ====="
+
+        BUILD_ENV="$BUILD_IOS"
+
+        set -a
+        . ./ci/artifacts.env
+        set +a
+
+        SOURCE_ARTIFACT="./$ARTIFACT_BASENAME-ios-$BUILD_ENV.zip"
+
+        test -s "$SOURCE_ARTIFACT"
+        test -n "$GARAGE_ENDPOINT"
+        test -n "$GARAGE_ACCESS_KEY"
+        test -n "$GARAGE_SECRET_KEY"
+        test -n "$GARAGE_REGION"
+        test -n "$GARAGE_BUCKET"
+        test -n "$GARAGE_IOS_PREFIX"
+        test -n "$ARTIFACT_BASENAME"
+
+        OBJECT_KEY="$GARAGE_IOS_PREFIX/$BUILD_ENV/$ARTIFACT_BASENAME-ios-$BUILD_ENV.zip"
+
+        ENDPOINT="$(
+          printf '%s' "$GARAGE_ENDPOINT" |
+            sed 's:/*$::'
+        )"
+
+        OBJECT_URL="$ENDPOINT/$GARAGE_BUCKET/$OBJECT_KEY"
+
+        echo "ARTIFACT_CONFIG=PASS"
+        echo "IOS_BUILD_ENV=$BUILD_ENV"
+        echo "GARAGE_OBJECT_KEY=$OBJECT_KEY"
+
+        echo
+        echo "===== UPLOAD ZIP ====="
+
+        curl \
+          --fail \
+          --silent \
+          --show-error \
+          --aws-sigv4 "aws:amz:$GARAGE_REGION:s3" \
+          --user "$GARAGE_ACCESS_KEY:$GARAGE_SECRET_KEY" \
+          --header "Content-Type: application/zip" \
+          --upload-file "$SOURCE_ARTIFACT" \
+          "$OBJECT_URL"
+
+        echo "GARAGE_UPLOAD=PASS"
+
+        echo
+        echo "===== VERIFY REMOTE OBJECT ====="
+
+        HTTP_CODE="$(
+          curl \
+            --silent \
+            --show-error \
+            --output /dev/null \
+            --write-out '%{http_code}' \
+            --head \
+            --aws-sigv4 "aws:amz:$GARAGE_REGION:s3" \
+            --user "$GARAGE_ACCESS_KEY:$GARAGE_SECRET_KEY" \
+            "$OBJECT_URL"
+        )"
+
+        if [ "$HTTP_CODE" != "200" ]; then
+          echo "GARAGE_HEAD_OBJECT=FAIL"
+          echo "HTTP_STATUS=$HTTP_CODE"
+          exit 1
+        fi
+
+        echo "GARAGE_HEAD_OBJECT=PASS"
+
+        echo
+        echo "============================================================"
+        echo " IOS MANUAL BUILD SUMMARY"
+        echo "============================================================"
+        printf '%-32s %s\n' "Quality" "PASS"
+        printf '%-32s %s\n' "Environment" "$BUILD_ENV"
+        printf '%-32s %s\n' "Framework build" "PASS"
+        printf '%-32s %s\n' "ZIP validation" "PASS"
+        printf '%-32s %s\n' "Garage upload" "PASS"
+        printf '%-32s %s\n' "Remote verification" "PASS"
+        echo "============================================================"
+        echo "IOS_MANUAL_BUILD=PASS"

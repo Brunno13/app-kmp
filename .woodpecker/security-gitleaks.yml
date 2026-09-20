@@ -1,5 +1,6 @@
 when:
   - event: manual
+    evaluate: 'BUILD_IOS != "staging" && BUILD_IOS != "production"'
 
 labels:
   platform: linux/amd64
