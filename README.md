@@ -391,7 +391,7 @@ Android and iOS production pipelines are currently validated.
 - [x] Self-hosted macOS / iOS CI
 - [x] Android production pipeline
 - [x] iOS production pipeline
-- [ ] Final functional validation on iOS
+- [x] Final functional validation on iOS
 
 ### 🔜 Future Features
 
